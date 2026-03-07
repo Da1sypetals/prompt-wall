@@ -140,29 +140,32 @@ export function PromptCard({
   const displayContent = isExpanded ? prompt.content : previewText;
 
   return (
-    <Card className={`${colors.bg} ${colors.border} border-2 transition-all hover:shadow-lg`}>
+    <Card 
+      className={`${colors.bg} ${colors.border} border-2 transition-all hover:shadow-lg`}
+      onClick={handleCopy}
+    >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <h3 className={`text-xl font-bold ${colors.title}`}>{prompt.title}</h3>
-          <div className="flex gap-1">
+          <div className="flex gap-2 cursor-default" onClick={(e) => e.stopPropagation()}>
             <Button
               variant="ghost"
               size="icon"
               onClick={handleCopy}
-              className={`h-8 w-8 ${colors.text} hover:${colors.bg}`}
+              className={`h-10 w-10 ${colors.text} hover:${colors.bg}`}
               title="Copy prompt"
             >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
             </Button>
             {needsExpandButton && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={toggleExpand}
-                className={`h-8 w-8 ${colors.text} hover:${colors.bg}`}
+                className={`h-10 w-10 ${colors.text} hover:${colors.bg}`}
                 title={isExpanded ? "Collapse" : "Expand"}
               >
-                {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
               </Button>
             )}
             {isAuthenticated && (
@@ -171,19 +174,19 @@ export function PromptCard({
                   variant="ghost"
                   size="icon"
                   onClick={() => onEdit?.(prompt)}
-                  className={`h-8 w-8 ${colors.text} hover:${colors.bg}`}
+                  className={`h-10 w-10 ${colors.text} hover:${colors.bg}`}
                   title="Edit prompt"
                 >
-                  <Pencil className="h-4 w-4" />
+                  <Pencil className="h-5 w-5" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => onDelete?.(prompt.id)}
-                  className={`h-8 w-8 ${colors.text} hover:${colors.bg} hover:text-red-500`}
+                  className={`h-10 w-10 ${colors.text} hover:${colors.bg} hover:text-red-500`}
                   title="Delete prompt"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-5 w-5" />
                 </Button>
               </>
             )}
