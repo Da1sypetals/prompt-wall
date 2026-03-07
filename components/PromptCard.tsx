@@ -8,16 +8,25 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Prompt } from '@/lib/types';
 
+interface PreviewLimits {
+  maxChars: number;
+  maxLines: number;
+}
+
 interface PromptCardProps {
   prompt?: Prompt;
   colorIndex: number;
   isAuthenticated: boolean;
   isEditing?: boolean;
   isNew?: boolean;
+  initialTitle?: string;
+  initialContent?: string;
   onEdit?: (prompt: Prompt) => void;
   onDelete?: (id: string) => void;
   onSave?: (title: string, content: string) => void;
   onDiscard?: () => void;
+  onChange?: (title: string, content: string) => void;
+  previewLimits?: PreviewLimits;
 }
 
 // Pink to magenta color spectrum
@@ -30,26 +39,28 @@ const cardColors = [
   { bg: 'bg-rose-100', border: 'border-rose-300', title: 'text-rose-800', text: 'text-rose-700', input: 'focus:border-rose-500 focus:ring-rose-300' },
 ];
 
-// Get preview text with max 100 chars OR max 8 lines, whichever comes first
+// Get preview text with max chars AND max lines, whichever is stricter
 // Ellipsis on separate line
-function getPreviewContent(content: string): { text: string; isTruncated: boolean } {
-  const maxChars = 150;
-  const maxLines = 8;
+function getPreviewContent(content: string, limits: PreviewLimits): { text: string; isTruncated: boolean } {
+  const { maxChars, maxLines } = limits;
   
   const lines = content.split('\n');
+  let isTruncated = false;
+  let result = content;
   
-  // Check line limit first
+  // Apply line limit first
   if (lines.length > maxLines) {
-    const truncatedLines = lines.slice(0, maxLines);
-    return { text: truncatedLines.join('\n'), isTruncated: true };
+    result = lines.slice(0, maxLines).join('\n');
+    isTruncated = true;
   }
   
-  // Check char limit
-  if (content.length > maxChars) {
-    return { text: content.slice(0, maxChars), isTruncated: true };
+  // Then apply char limit (in case lines are very long)
+  if (result.length > maxChars) {
+    result = result.slice(0, maxChars);
+    isTruncated = true;
   }
   
-  return { text: content, isTruncated: false };
+  return { text: result, isTruncated };
 }
 
 export function PromptCard({
@@ -58,16 +69,35 @@ export function PromptCard({
   isAuthenticated,
   isEditing = false,
   isNew = false,
+  initialTitle = '',
+  initialContent = '',
   onEdit,
   onDelete,
   onSave,
   onDiscard,
+  onChange,
+  previewLimits = { maxChars: 150, maxLines: 8 },
 }: PromptCardProps) {
   const [copied, setCopied] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [editTitle, setEditTitle] = useState(prompt?.title || '');
-  const [editContent, setEditContent] = useState(prompt?.content || '');
+  const [editTitle, setEditTitle] = useState(prompt?.title || initialTitle);
+  const [editContent, setEditContent] = useState(prompt?.content || initialContent);
   const colors = cardColors[colorIndex % cardColors.length];
+
+  // Notify parent of content changes for new prompts
+  const handleTitleChange = (value: string) => {
+    setEditTitle(value);
+    if (isNew && onChange) {
+      onChange(value, editContent);
+    }
+  };
+
+  const handleContentChange = (value: string) => {
+    setEditContent(value);
+    if (isNew && onChange) {
+      onChange(editTitle, value);
+    }
+  };
 
   const handleCopy = async () => {
     if (!prompt) return;
@@ -100,13 +130,13 @@ export function PromptCard({
           <Input
             placeholder="Edit Title"
             value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
+            onChange={(e) => handleTitleChange(e.target.value)}
             className={`text-xl font-bold bg-white/70 border-${colors.border.split('-')[1]}-200 ${colors.input}`}
           />
           <Textarea
             placeholder="Edit content..."
             value={editContent}
-            onChange={(e) => setEditContent(e.target.value)}
+            onChange={(e) => handleContentChange(e.target.value)}
             className={`bg-white/70 border-${colors.border.split('-')[1]}-200 ${colors.input} resize-none [field-sizing:content] max-h-[24rem] overflow-y-auto`}
           />
           <div className="flex gap-2 justify-end">
@@ -135,8 +165,8 @@ export function PromptCard({
   // View mode
   if (!prompt) return null;
 
-  const { text: previewText, isTruncated } = getPreviewContent(prompt.content);
-  const needsExpandButton = isTruncated || prompt.content.length > 100 || prompt.content.split('\n').length > 8;
+  const { text: previewText, isTruncated } = getPreviewContent(prompt.content, previewLimits);
+  const needsExpandButton = isTruncated || prompt.content.length > previewLimits.maxChars || prompt.content.split('\n').length > previewLimits.maxLines;
   const displayContent = isExpanded ? prompt.content : previewText;
 
   return (
