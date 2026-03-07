@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Copy, Pencil, Trash2, Check, X, Save, ChevronDown, ChevronUp } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,12 +31,12 @@ interface PromptCardProps {
 
 // Pink to magenta color spectrum
 const cardColors = [
-  { bg: 'bg-pink-50', border: 'border-pink-200', title: 'text-pink-700', text: 'text-pink-600', input: 'focus:border-pink-400 focus:ring-pink-200' },
-  { bg: 'bg-rose-50', border: 'border-rose-200', title: 'text-rose-700', text: 'text-rose-600', input: 'focus:border-rose-400 focus:ring-rose-200' },
-  { bg: 'bg-fuchsia-50', border: 'border-fuchsia-200', title: 'text-fuchsia-700', text: 'text-fuchsia-600', input: 'focus:border-fuchsia-400 focus:ring-fuchsia-200' },
-  { bg: 'bg-purple-50', border: 'border-purple-200', title: 'text-purple-700', text: 'text-purple-600', input: 'focus:border-purple-400 focus:ring-purple-200' },
-  { bg: 'bg-pink-100', border: 'border-pink-300', title: 'text-pink-800', text: 'text-pink-700', input: 'focus:border-pink-500 focus:ring-pink-300' },
-  { bg: 'bg-rose-100', border: 'border-rose-300', title: 'text-rose-800', text: 'text-rose-700', input: 'focus:border-rose-500 focus:ring-rose-300' },
+  { bg: 'bg-pink-50', headerBg: 'bg-pink-200/85', border: 'border-pink-200/85', title: 'text-pink-800', text: 'text-pink-600', input: 'focus:border-pink-400 focus:ring-pink-200' },
+  { bg: 'bg-rose-50', headerBg: 'bg-rose-200/85', border: 'border-rose-200/85', title: 'text-rose-800', text: 'text-rose-600', input: 'focus:border-rose-400 focus:ring-rose-200' },
+  { bg: 'bg-fuchsia-50', headerBg: 'bg-fuchsia-200/85', border: 'border-fuchsia-200/85', title: 'text-fuchsia-800', text: 'text-fuchsia-600', input: 'focus:border-fuchsia-400 focus:ring-fuchsia-200' },
+  { bg: 'bg-purple-50', headerBg: 'bg-purple-200/85', border: 'border-purple-200/85', title: 'text-purple-800', text: 'text-purple-600', input: 'focus:border-purple-400 focus:ring-purple-200' },
+  { bg: 'bg-pink-100', headerBg: 'bg-pink-300/85', border: 'border-pink-300/85', title: 'text-pink-900', text: 'text-pink-700', input: 'focus:border-pink-500 focus:ring-pink-300' },
+  { bg: 'bg-rose-100', headerBg: 'bg-rose-300/85', border: 'border-rose-300/85', title: 'text-rose-900', text: 'text-rose-700', input: 'focus:border-rose-500 focus:ring-rose-300' },
 ];
 
 // Get preview text with max chars AND max lines, whichever is stricter
@@ -170,19 +170,20 @@ export function PromptCard({
   const displayContent = isExpanded ? prompt.content : previewText;
 
   return (
-    <Card 
-      className={`${colors.bg} ${colors.border} border-2 transition-all hover:shadow-lg`}
-      onClick={handleCopy}
-    >
-      <CardHeader className="pb-2">
+    <Card className={`${colors.bg} ${colors.border} border-2 transition-all hover:shadow-lg overflow-hidden p-0`}>
+      {/* Header with darker background - click to copy */}
+      <div 
+        className={`${colors.headerBg} px-6 pt-5 pb-3 cursor-pointer`}
+        onClick={handleCopy}
+      >
         <div className="flex items-start justify-between">
           <h3 className={`text-xl font-bold ${colors.title}`}>{prompt.title}</h3>
-          <div className="flex gap-2 cursor-default" onClick={(e) => e.stopPropagation()}>
+          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
               variant="ghost"
               size="icon"
               onClick={handleCopy}
-              className={`h-10 w-10 ${colors.text} hover:${colors.bg}`}
+              className={`h-10 w-10 ${colors.title} hover:bg-black/10`}
               title="Copy prompt"
             >
               {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
@@ -192,7 +193,7 @@ export function PromptCard({
                 variant="ghost"
                 size="icon"
                 onClick={toggleExpand}
-                className={`h-10 w-10 ${colors.text} hover:${colors.bg}`}
+                className={`h-10 w-10 ${colors.title} hover:bg-black/10`}
                 title={isExpanded ? "Collapse" : "Expand"}
               >
                 {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
@@ -204,7 +205,7 @@ export function PromptCard({
                   variant="ghost"
                   size="icon"
                   onClick={() => onEdit?.(prompt)}
-                  className={`h-10 w-10 ${colors.text} hover:${colors.bg}`}
+                  className={`h-10 w-10 ${colors.title} hover:bg-black/10`}
                   title="Edit prompt"
                 >
                   <Pencil className="h-5 w-5" />
@@ -213,7 +214,7 @@ export function PromptCard({
                   variant="ghost"
                   size="icon"
                   onClick={() => onDelete?.(prompt.id)}
-                  className={`h-10 w-10 ${colors.text} hover:${colors.bg} hover:text-red-500`}
+                  className={`h-10 w-10 ${colors.title} hover:bg-black/10 hover:text-red-600`}
                   title="Delete prompt"
                 >
                   <Trash2 className="h-5 w-5" />
@@ -222,8 +223,9 @@ export function PromptCard({
             )}
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
+      </div>
+      {/* Content with normal background */}
+      <CardContent className="px-6 pt-4 pb-6">
         <p className={`${colors.text} whitespace-pre-wrap`}>{displayContent}</p>
         {!isExpanded && isTruncated && (
           <p className={`${colors.text} mt-1`}>...</p>
