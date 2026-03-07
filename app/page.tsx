@@ -1,65 +1,245 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, LogOut, LogIn } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { PromptCard } from '@/components/PromptCard';
+import { SearchBar } from '@/components/SearchBar';
+import { LoginDialog } from '@/components/LoginDialog';
+import { Prompt } from '@/lib/types';
 
 export default function Home() {
+  const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [contentQuery, setContentQuery] = useState('');
+  const [titleQuery, setTitleQuery] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+
+  // Check auth status on mount
+  useEffect(() => {
+    const authStatus = localStorage.getItem('prompt-wall-auth');
+    if (authStatus === 'true') {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  // Fetch prompts
+  const fetchPrompts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (contentQuery) params.append('content', contentQuery);
+      if (titleQuery) params.append('title', titleQuery);
+
+      const response = await fetch(`/api/prompts?${params}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setPrompts(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch prompts:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [contentQuery, titleQuery]);
+
+  useEffect(() => {
+    fetchPrompts();
+  }, [fetchPrompts]);
+
+  // Login handler
+  const handleLogin = async (password: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setIsAuthenticated(true);
+        localStorage.setItem('prompt-wall-auth', 'true');
+        setShowLogin(false);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
+    }
+  };
+
+  // Logout handler
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('prompt-wall-auth');
+    setEditingId(null);
+    setIsCreating(false);
+  };
+
+  // Create prompt
+  const handleCreate = async (title: string, content: string) => {
+    const response = await fetch('/api/prompts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, content }),
+    });
+
+    if (response.ok) {
+      setIsCreating(false);
+      fetchPrompts();
+    }
+  };
+
+  // Update prompt
+  const handleUpdate = async (id: string, title: string, content: string) => {
+    const response = await fetch(`/api/prompts/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, content }),
+    });
+
+    if (response.ok) {
+      setEditingId(null);
+      fetchPrompts();
+    }
+  };
+
+  // Delete prompt
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this prompt?')) return;
+
+    const response = await fetch(`/api/prompts/${id}`, {
+      method: 'DELETE',
+    });
+
+    if (response.ok) {
+      fetchPrompts();
+    }
+  };
+
+  // Edit handler
+  const handleEdit = (prompt: Prompt) => {
+    setEditingId(prompt.id);
+    setIsCreating(false);
+  };
+
+  // Cancel edit/create
+  const handleCancel = () => {
+    setEditingId(null);
+    setIsCreating(false);
+  };
+
+  // Clear filters
+  const handleClear = () => {
+    setContentQuery('');
+    setTitleQuery('');
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <main className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-fuchsia-50">
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-4xl font-bold text-pink-600">Prompt Wall</h1>
+          {isAuthenticated ? (
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              className="border-pink-300 text-pink-600 hover:bg-pink-100"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => setShowLogin(true)}
+              className="border-pink-300 text-pink-600 hover:bg-pink-100"
             >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              <LogIn className="h-4 w-4 mr-2" />
+              Login
+            </Button>
+          )}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Search Bar */}
+        <div className="mb-6">
+          <SearchBar
+            contentQuery={contentQuery}
+            titleQuery={titleQuery}
+            onContentChange={setContentQuery}
+            onTitleChange={setTitleQuery}
+            onClear={handleClear}
+          />
         </div>
-      </main>
-    </div>
+
+        {/* New Prompt Button */}
+        {isAuthenticated && !isCreating && (
+          <div className="mb-6">
+            <Button
+              onClick={() => {
+                setEditingId(null);
+                setIsCreating(true);
+              }}
+              className="bg-pink-500 hover:bg-pink-600"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Prompt
+            </Button>
+          </div>
+        )}
+
+        {/* Prompts Grid */}
+        {loading ? (
+          <div className="text-center py-12 text-pink-400">Loading...</div>
+        ) : (
+          <div className="grid gap-4">
+            {/* New Prompt Card (always at top when creating) */}
+            {isCreating && (
+              <PromptCard
+                colorIndex={0}
+                isAuthenticated={isAuthenticated}
+                isNew={true}
+                onSave={handleCreate}
+                onCancel={handleCancel}
+              />
+            )}
+
+            {/* Existing Prompts */}
+            {prompts.length === 0 && !isCreating ? (
+              <div className="text-center py-12 text-pink-400">
+                {contentQuery || titleQuery
+                  ? 'No prompts match your search'
+                  : 'No prompts yet. Create one!'}
+              </div>
+            ) : (
+              prompts.map((prompt, index) => (
+                <PromptCard
+                  key={prompt.id}
+                  prompt={prompt}
+                  colorIndex={isCreating ? index + 1 : index}
+                  isAuthenticated={isAuthenticated}
+                  isEditing={editingId === prompt.id}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onSave={(title, content) => handleUpdate(prompt.id, title, content)}
+                  onCancel={handleCancel}
+                />
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Login Dialog */}
+      <LoginDialog isOpen={showLogin} onLogin={handleLogin} />
+    </main>
   );
 }
