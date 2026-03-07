@@ -80,8 +80,7 @@ export function PromptCard({
             placeholder="Edit content..."
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
-            rows={5}
-            className={`bg-white/70 border-${colors.border.split('-')[1]}-200 ${colors.input} resize-none`}
+            className={`bg-white/70 border-${colors.border.split('-')[1]}-200 ${colors.input} resize-none [field-sizing:content] max-h-[24rem] overflow-y-auto`}
           />
           <div className="flex gap-2 justify-end">
             <Button
