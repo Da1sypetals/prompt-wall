@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, LogOut, LogIn } from 'lucide-react';
+import { Plus, LogOut, LogIn, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PromptCard } from '@/components/PromptCard';
 import { SearchBar } from '@/components/SearchBar';
@@ -180,27 +180,34 @@ export default function Home() {
           />
         </div>
 
-        {/* New Prompt Button */}
-        {isAuthenticated && !isCreating && (
-          <div className="mb-6">
-            <Button
-              onClick={() => {
-                setEditingId(null);
-                setIsCreating(true);
-              }}
-              className="bg-pink-500 hover:bg-pink-600"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Prompt
-            </Button>
+        {/* New Prompt Button & Loading Indicator */}
+        {(isAuthenticated || loading) && !isCreating && (
+          <div className="mb-6 flex items-center justify-between">
+            {isAuthenticated ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditingId(null);
+                  setIsCreating(true);
+                }}
+                className="border-pink-300 text-pink-600 hover:bg-pink-100"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Prompt
+              </Button>
+            ) : (
+              <div />
+            )}
+            {loading && (
+              <div className="flex items-center text-pink-500">
+                <Loader2 className="h-5 w-5 animate-spin" />
+              </div>
+            )}
           </div>
         )}
 
         {/* Prompts Grid */}
-        {loading ? (
-          <div className="text-center py-12 text-pink-400">Loading...</div>
-        ) : (
-          <div className="grid gap-4">
+        <div className="grid gap-4">
             {/* New Prompt Card (always at top when creating) */}
             {isCreating && (
               <PromptCard
@@ -213,7 +220,7 @@ export default function Home() {
             )}
 
             {/* Existing Prompts */}
-            {prompts.length === 0 && !isCreating ? (
+            {prompts.length === 0 && !isCreating && !loading ? (
               <div className="text-center py-12 text-pink-400">
                 {contentQuery || titleQuery
                   ? 'No prompts match your search'
@@ -235,7 +242,6 @@ export default function Home() {
               ))
             )}
           </div>
-        )}
       </div>
 
       {/* Login Dialog */}
