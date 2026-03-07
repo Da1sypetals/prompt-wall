@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Copy, Pencil, Trash2, Check, X, Save } from 'lucide-react';
+import { Copy, Pencil, Trash2, Check, X, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +30,28 @@ const cardColors = [
   { bg: 'bg-rose-100', border: 'border-rose-300', title: 'text-rose-800', text: 'text-rose-700', input: 'focus:border-rose-500 focus:ring-rose-300' },
 ];
 
+// Get preview text with max 100 chars OR max 8 lines, whichever comes first
+// Ellipsis on separate line
+function getPreviewContent(content: string): { text: string; isTruncated: boolean } {
+  const maxChars = 150;
+  const maxLines = 8;
+  
+  const lines = content.split('\n');
+  
+  // Check line limit first
+  if (lines.length > maxLines) {
+    const truncatedLines = lines.slice(0, maxLines);
+    return { text: truncatedLines.join('\n'), isTruncated: true };
+  }
+  
+  // Check char limit
+  if (content.length > maxChars) {
+    return { text: content.slice(0, maxChars), isTruncated: true };
+  }
+  
+  return { text: content, isTruncated: false };
+}
+
 export function PromptCard({
   prompt,
   colorIndex,
@@ -42,6 +64,7 @@ export function PromptCard({
   onDiscard,
 }: PromptCardProps) {
   const [copied, setCopied] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [editTitle, setEditTitle] = useState(prompt?.title || '');
   const [editContent, setEditContent] = useState(prompt?.content || '');
   const colors = cardColors[colorIndex % cardColors.length];
@@ -63,6 +86,10 @@ export function PromptCard({
     setEditTitle(prompt?.title || '');
     setEditContent(prompt?.content || '');
     onDiscard?.();
+  };
+
+  const toggleExpand = () => {
+    setIsExpanded(!isExpanded);
   };
 
   // Editing mode
@@ -108,7 +135,9 @@ export function PromptCard({
   // View mode
   if (!prompt) return null;
 
-  const previewText = prompt.content.slice(0, 150) + (prompt.content.length > 150 ? '...' : '');
+  const { text: previewText, isTruncated } = getPreviewContent(prompt.content);
+  const needsExpandButton = isTruncated || prompt.content.length > 100 || prompt.content.split('\n').length > 8;
+  const displayContent = isExpanded ? prompt.content : previewText;
 
   return (
     <Card className={`${colors.bg} ${colors.border} border-2 transition-all hover:shadow-lg`}>
@@ -125,6 +154,17 @@ export function PromptCard({
             >
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </Button>
+            {needsExpandButton && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleExpand}
+                className={`h-8 w-8 ${colors.text} hover:${colors.bg}`}
+                title={isExpanded ? "Collapse" : "Expand"}
+              >
+                {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            )}
             {isAuthenticated && (
               <>
                 <Button
@@ -151,7 +191,10 @@ export function PromptCard({
         </div>
       </CardHeader>
       <CardContent>
-        <p className={`${colors.text} whitespace-pre-wrap`}>{previewText}</p>
+        <p className={`${colors.text} whitespace-pre-wrap`}>{displayContent}</p>
+        {!isExpanded && isTruncated && (
+          <p className={`${colors.text} mt-1`}>...</p>
+        )}
       </CardContent>
     </Card>
   );
