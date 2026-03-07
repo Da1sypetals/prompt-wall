@@ -130,8 +130,8 @@ export default function Home() {
     setIsCreating(false);
   };
 
-  // Cancel edit/create
-  const handleCancel = () => {
+  // Discard edit/create
+  const handleDiscard = () => {
     setEditingId(null);
     setIsCreating(false);
   };
@@ -208,7 +208,7 @@ export default function Home() {
                 isAuthenticated={isAuthenticated}
                 isNew={true}
                 onSave={handleCreate}
-                onCancel={handleCancel}
+                onDiscard={handleDiscard}
               />
             )}
 
@@ -230,7 +230,7 @@ export default function Home() {
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onSave={(title, content) => handleUpdate(prompt.id, title, content)}
-                  onCancel={handleCancel}
+                  onDiscard={handleDiscard}
                 />
               ))
             )}

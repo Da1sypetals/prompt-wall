@@ -17,7 +17,7 @@ interface PromptCardProps {
   onEdit?: (prompt: Prompt) => void;
   onDelete?: (id: string) => void;
   onSave?: (title: string, content: string) => void;
-  onCancel?: () => void;
+  onDiscard?: () => void;
 }
 
 // Pink to magenta color spectrum
@@ -39,7 +39,7 @@ export function PromptCard({
   onEdit,
   onDelete,
   onSave,
-  onCancel,
+  onDiscard,
 }: PromptCardProps) {
   const [copied, setCopied] = useState(false);
   const [editTitle, setEditTitle] = useState(prompt?.title || '');
@@ -59,10 +59,10 @@ export function PromptCard({
     onSave?.(editTitle.trim(), editContent.trim());
   };
 
-  const handleCancel = () => {
+  const handleDiscard = () => {
     setEditTitle(prompt?.title || '');
     setEditContent(prompt?.content || '');
-    onCancel?.();
+    onDiscard?.();
   };
 
   // Editing mode
@@ -86,11 +86,11 @@ export function PromptCard({
           <div className="flex gap-2 justify-end">
             <Button
               variant="outline"
-              onClick={handleCancel}
+              onClick={handleDiscard}
               className="border-pink-300 text-pink-600 hover:bg-pink-100"
             >
               <X className="h-4 w-4 mr-1" />
-              Cancel
+              Discard
             </Button>
             <Button
               onClick={handleSave}
