@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, X, LogOut, LogIn, Loader2 } from 'lucide-react';
+import { Plus, X, LogOut, LogIn, Loader2, Puzzle } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { PromptCard } from '@/components/PromptCard';
 import { SearchBar } from '@/components/SearchBar';
@@ -244,25 +245,36 @@ export default function Home() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-4xl font-bold text-pink-600">Prompt Wall</h1>
-          {isAuthenticated ? (
-            <Button
-              variant="outline"
-              onClick={handleLogout}
-              className="border-pink-300 text-pink-600 hover:bg-pink-100"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              onClick={() => setShowLogin(true)}
-              className="border-pink-300 text-pink-600 hover:bg-pink-100"
-            >
-              <LogIn className="h-4 w-4 mr-2" />
-              Login
-            </Button>
-          )}
+          <div className="flex items-center gap-3">
+            <Link href="/compose">
+              <Button
+                variant="outline"
+                className="border-pink-300 text-pink-600 hover:bg-pink-100"
+              >
+                <Puzzle className="h-4 w-4 mr-2" />
+                拼好prompt
+              </Button>
+            </Link>
+            {isAuthenticated ? (
+              <Button
+                variant="outline"
+                onClick={handleLogout}
+                className="border-pink-300 text-pink-600 hover:bg-pink-100"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => setShowLogin(true)}
+                className="border-pink-300 text-pink-600 hover:bg-pink-100"
+              >
+                <LogIn className="h-4 w-4 mr-2" />
+                Login
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Search Bar */}
