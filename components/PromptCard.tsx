@@ -101,7 +101,7 @@ export function PromptCard({
 
   const handleCopy = async () => {
     if (!prompt) return;
-    const textToCopy = `# ${prompt.title}\n\n${prompt.content}`;
+    const textToCopy = prompt.content;
     await navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
