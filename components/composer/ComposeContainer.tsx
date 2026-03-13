@@ -128,12 +128,16 @@ export function ComposeContainer() {
       const prompt = prompts.find((p) => p.id === activeData.promptId);
       if (!prompt) return;
 
+      // Calculate color index based on prompt's position in the source list
+      const promptIndex = prompts.findIndex((p) => p.id === prompt.id);
+
       const newItem: ComposeItem = {
         id: generateId(),
         type: 'predefined',
         promptId: prompt.id,
         title: prompt.title,
         content: prompt.content,
+        colorIndex: promptIndex >= 0 ? promptIndex : 0,
       };
 
       let targetIndex: number;
@@ -271,6 +275,7 @@ export function ComposeContainer() {
           <QueueItem
             item={activeItem}
             isOverlay
+            colorIndex={activeItem.colorIndex}
             onRemove={() => {}}
             onMove={() => {}}
             onUpdateContent={() => {}}

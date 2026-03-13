@@ -19,4 +19,5 @@ export interface ComposeItem {
   promptId?: string;    // predefined 时关联原 prompt ID
   title?: string;       // predefined 时显示标题
   content: string;      // 内容（predefined 为原内容/custom 为用户输入）
+  colorIndex?: number;  // predefined 时保留颜色索引
 }

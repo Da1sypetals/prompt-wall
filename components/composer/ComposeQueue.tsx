@@ -172,6 +172,7 @@ export function ComposeQueue({
                     item={item}
                     index={index}
                     totalItems={items.length}
+                    colorIndex={item.colorIndex}
                     onRemove={onRemove}
                     onMove={onMove}
                     onUpdateContent={onUpdateContent}

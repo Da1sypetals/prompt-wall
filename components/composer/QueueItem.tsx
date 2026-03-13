@@ -24,6 +24,7 @@ interface QueueItemProps {
   index?: number;
   totalItems?: number;
   isOverlay?: boolean;
+  colorIndex?: number;
   onRemove: (id: string) => void;
   onMove: (id: string, direction: 'up' | 'down') => void;
   onUpdateContent: (id: string, content: string) => void;
@@ -34,6 +35,7 @@ export function QueueItem({
   index = 0,
   totalItems = 1,
   isOverlay = false,
+  colorIndex = 0,
   onRemove,
   onMove,
   onUpdateContent,
@@ -90,25 +92,18 @@ export function QueueItem({
     setIsEditing(false);
   };
 
+  // Pink to magenta color spectrum for predefined (matching PromptSourcePanel)
+  const cardColors = [
+    { bg: 'bg-pink-50', border: 'border-pink-200', headerBg: 'bg-pink-100/50', title: 'text-pink-800', text: 'text-pink-600', icon: 'text-pink-500' },
+    { bg: 'bg-rose-50', border: 'border-rose-200', headerBg: 'bg-rose-100/50', title: 'text-rose-800', text: 'text-rose-600', icon: 'text-rose-500' },
+    { bg: 'bg-fuchsia-50', border: 'border-fuchsia-200', headerBg: 'bg-fuchsia-100/50', title: 'text-fuchsia-800', text: 'text-fuchsia-600', icon: 'text-fuchsia-500' },
+    { bg: 'bg-purple-50', border: 'border-purple-200', headerBg: 'bg-purple-100/50', title: 'text-purple-800', text: 'text-purple-600', icon: 'text-purple-500' },
+  ];
+
+  const customColors = { bg: 'bg-green-50', border: 'border-green-200', headerBg: 'bg-green-100/50', title: 'text-green-800', text: 'text-green-600', icon: 'text-green-500' };
+
   // Color scheme based on type
-  const colors =
-    item.type === 'predefined'
-      ? {
-          bg: 'bg-pink-50',
-          border: 'border-pink-200',
-          headerBg: 'bg-pink-100/50',
-          title: 'text-pink-800',
-          text: 'text-pink-600',
-          icon: 'text-pink-500',
-        }
-      : {
-          bg: 'bg-green-50',
-          border: 'border-green-200',
-          headerBg: 'bg-green-100/50',
-          title: 'text-green-800',
-          text: 'text-green-600',
-          icon: 'text-green-500',
-        };
+  const colors = item.type === 'predefined' ? cardColors[colorIndex % cardColors.length] : customColors;
 
   if (isOverlay) {
     return (
@@ -134,31 +129,29 @@ export function QueueItem({
   }
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <Card
-        className={`${colors.bg} ${colors.border} border-2 transition-all ${
+        className={`${colors.bg} ${colors.border} border-2 transition-all cursor-grab active:cursor-grabbing ${
           isDragging ? 'opacity-30 shadow-lg' : 'hover:shadow-md'
         }`}
       >
-        <CardContent className="p-3">
+        <CardContent className="p-2">
           {/* Header */}
-          <div className={`${colors.headerBg} -mx-3 -mt-3 px-3 py-2 rounded-t-lg mb-2`}>
+          <div className="-mx-2 -mt-2 px-2 py-1 rounded-t-lg mb-1">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div {...listeners} className="cursor-grab active:cursor-grabbing">
-                  <GripVertical className={`h-4 w-4 ${colors.icon}`} />
-                </div>
+                <GripVertical className={`h-4 w-4 ${colors.icon}`} />
                 {item.type === 'predefined' ? (
                   <>
                     <FileText className={`h-4 w-4 ${colors.icon}`} />
-                    <span className={`text-xs font-medium ${colors.title}`}>
+                    <span className={`text-sm font-bold ${colors.title}`}>
                       #{index + 1} {item.title}
                     </span>
                   </>
                 ) : (
                   <>
                     <Sparkles className={`h-4 w-4 ${colors.icon}`} />
-                    <span className={`text-xs font-medium ${colors.title}`}>
+                    <span className={`text-sm font-bold ${colors.title}`}>
                       #{index + 1} Custom
                     </span>
                   </>
@@ -172,7 +165,10 @@ export function QueueItem({
                   size="icon"
                   className={`h-6 w-6 ${colors.text} hover:bg-white/50`}
                   disabled={isFirst}
-                  onClick={() => onMove(item.id, 'up')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMove(item.id, 'up');
+                  }}
                 >
                   <ChevronUp className="h-4 w-4" />
                 </Button>
@@ -181,7 +177,10 @@ export function QueueItem({
                   size="icon"
                   className={`h-6 w-6 ${colors.text} hover:bg-white/50`}
                   disabled={isLast}
-                  onClick={() => onMove(item.id, 'down')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMove(item.id, 'down');
+                  }}
                 >
                   <ChevronDown className="h-4 w-4" />
                 </Button>
@@ -192,7 +191,10 @@ export function QueueItem({
                     variant="ghost"
                     size="sm"
                     className={`h-6 px-2 text-xs ${colors.text} hover:bg-white/50`}
-                    onClick={() => setIsEditing(true)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsEditing(true);
+                    }}
                   >
                     <Edit2 className="h-3 w-3 mr-1" />
                     edit
@@ -205,29 +207,34 @@ export function QueueItem({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 px-2 text-xs bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-700 font-medium"
-                      onClick={() => {
+                      className="h-7 px-2 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsConfirmingDelete(false);
+                      }}
+                    >
+                      cancel
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-700 font-medium"
+                      onClick={(e) => {
+                        e.stopPropagation();
                         onRemove(item.id);
                         setIsConfirmingDelete(false);
                       }}
                     >
                       confirm delete
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsConfirmingDelete(false)}
-                    >
-                      cancel
-                    </Button>
                   </div>
                 ) : (
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 text-pink-400 hover:text-red-500 hover:bg-red-50"
-                    onClick={() => {
+                    className="h-7 w-7 text-pink-400 hover:text-red-500 hover:bg-red-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (item.type === 'custom') {
                         setIsConfirmingDelete(true);
                       } else {
@@ -235,7 +242,7 @@ export function QueueItem({
                       }
                     }}
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
               </div>
