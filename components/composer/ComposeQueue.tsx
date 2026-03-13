@@ -79,6 +79,7 @@ export function ComposeQueue({
     },
   });
   const [copied, setCopied] = useState(false);
+  const [isConfirmingClear, setIsConfirmingClear] = useState(false);
 
   // Show focus effect when dragging predefined (either over container or over items)
   const showFocus = isOver || (isDraggingPredefined && insertIndex !== null);
@@ -141,15 +142,39 @@ export function ComposeQueue({
               添加 Custom
             </Button>
             {items.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClear}
-                className="text-pink-500 hover:text-red-500 hover:bg-red-50"
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                清空
-              </Button>
+              isConfirmingClear ? (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                    onClick={() => setIsConfirmingClear(false)}
+                  >
+                    cancel
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs bg-red-100 text-red-600 hover:bg-red-200 hover:text-red-700 font-medium"
+                    onClick={() => {
+                      onClear();
+                      setIsConfirmingClear(false);
+                    }}
+                  >
+                    confirm clear
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsConfirmingClear(true)}
+                  className="text-pink-500 hover:text-red-500 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  清空
+                </Button>
+              )
             )}
           </div>
         </div>
