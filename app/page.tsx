@@ -174,68 +174,15 @@ export default function Home() {
     }
   };
 
-  // Calculate estimated height for a prompt based on its content and preview limits
-  // Returns a numeric score representing relative height
-  const getEstimatedHeight = (prompt: Prompt): number => {
-    const limits = getPreviewLimits();
-    if (!limits) {
-      // Single column: use full content length
-      return prompt.content.length + prompt.title.length * 2;
-    }
-    
-    // For multi-column, estimate based on how much content will be displayed
-    const contentLines = prompt.content.split('\n');
-    const willTruncate = contentLines.length > limits.maxLines || prompt.content.length > limits.maxChars;
-    
-    if (willTruncate) {
-      // Truncated content: base height + small variable part
-      const displayChars = Math.min(prompt.content.length, limits.maxChars);
-      const displayLines = Math.min(contentLines.length, limits.maxLines);
-      return limits.maxChars + displayLines * 20 + prompt.title.length * 2;
-    } else {
-      // Full content displayed
-      return prompt.content.length + contentLines.length * 20 + prompt.title.length * 2;
-    }
-  };
-
-  // Distribute prompts into columns using waterfall algorithm
-  // Each new item goes to the column with minimum current height
-  const distributeIntoColumns = (items: Prompt[], columnCount: number): Prompt[][] => {
-    if (columnCount === 1) return [items];
-    
-    // Initialize columns and their heights
-    const columns: Prompt[][] = Array.from({ length: columnCount }, () => []);
-    const columnHeights: number[] = Array(columnCount).fill(0);
-    
-    for (const item of items) {
-      // Find the column with minimum height
-      let minHeight = columnHeights[0];
-      let minIndex = 0;
-      
-      for (let i = 1; i < columnCount; i++) {
-        if (columnHeights[i] < minHeight) {
-          minHeight = columnHeights[i];
-          minIndex = i;
-        }
-      }
-      
-      // Add item to that column
-      columns[minIndex].push(item);
-      columnHeights[minIndex] += getEstimatedHeight(item);
-    }
-    
-    return columns;
-  };
-
-  // Get container class based on view mode
-  const getContainerClass = () => {
+  // Get column count based on view mode
+  const getColumnCount = () => {
     switch (viewMode) {
       case 'single':
-        return 'flex flex-col gap-4';
+        return 1;
       case 'double':
-        return 'grid grid-cols-1 md:grid-cols-2 gap-4';
+        return 2;
       case 'triple':
-        return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
+        return 3;
     }
   };
 
@@ -310,12 +257,17 @@ export default function Home() {
           )}
         </div>
 
-        {/* Prompts Grid */}
-        {viewMode === 'single' ? (
-          // Single column: simple vertical list
-          <div className={getContainerClass()}>
-            {/* New Prompt Card (always at top when creating) */}
-            {isCreating && (
+        {/* Prompts Grid - CSS Masonry Layout */}
+        <div 
+          className="gap-4"
+          style={{
+            columnCount: getColumnCount(),
+            columnGap: '1rem',
+          }}
+        >
+          {/* New Prompt Card (always at top when creating) */}
+          {isCreating && (
+            <div style={{ breakInside: 'avoid', marginBottom: '1rem' }}>
               <PromptCard
                 colorIndex={0}
                 isAuthenticated={isAuthenticated}
@@ -329,94 +281,35 @@ export default function Home() {
                   setNewPromptContent(content);
                 }}
               />
-            )}
+            </div>
+          )}
 
-            {/* Existing Prompts */}
-            {prompts.length === 0 && !isCreating && !loading ? (
-              <div className="text-center py-12 text-pink-400">
-                {contentQuery || titleQuery
-                  ? 'No prompts match your search'
-                  : 'No prompts yet. Create one!'}
-              </div>
-            ) : (
-              prompts.map((prompt, index) => (
-                <PromptCard
-                  key={prompt.id}
-                  prompt={prompt}
-                  colorIndex={index}
-                  isAuthenticated={isAuthenticated}
-                  isEditing={editingId === prompt.id}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onSave={(title, content) => handleUpdate(prompt.id, title, content)}
-                  onDiscard={handleDiscard}
-                  previewLimits={getPreviewLimits()}
-                />
-              ))
-            )}
-          </div>
-        ) : (
-          // Multi-column: waterfall layout
-          (() => {
-            const columnCount = viewMode === 'double' ? 2 : 3;
-            const columns = distributeIntoColumns(prompts, columnCount);
-            
-            return (
-              <div className={getContainerClass()}>
-                {/* Existing Prompts distributed into columns */}
-                {prompts.length === 0 && !isCreating && !loading ? (
-                  <div className="text-center py-12 text-pink-400 col-span-full">
-                    {contentQuery || titleQuery
-                      ? 'No prompts match your search'
-                      : 'No prompts yet. Create one!'}
-                  </div>
-                ) : (
-                  columns.map((column, colIndex) => (
-                    <div key={colIndex} className="flex flex-col gap-4">
-                      {/* New Prompt Card in first column when creating */}
-                      {isCreating && colIndex === 0 && (
-                        <PromptCard
-                          colorIndex={0}
-                          isAuthenticated={isAuthenticated}
-                          isNew={true}
-                          initialTitle={newPromptTitle}
-                          initialContent={newPromptContent}
-                          onSave={handleCreate}
-                          onDiscard={handleDiscard}
-                          onChange={(title, content) => {
-                            setNewPromptTitle(title);
-                            setNewPromptContent(content);
-                          }}
-                        />
-                      )}
-                      {column.map((prompt, index) => {
-                        // Calculate global color index (not affected by New Prompt)
-                        const globalIndex = columns
-                          .slice(0, colIndex)
-                          .reduce((sum, col) => sum + col.length, 0) + index;
-                        
-                        return (
-                          <PromptCard
-                            key={prompt.id}
-                            prompt={prompt}
-                            colorIndex={globalIndex}
-                            isAuthenticated={isAuthenticated}
-                            isEditing={editingId === prompt.id}
-                            onEdit={handleEdit}
-                            onDelete={handleDelete}
-                            onSave={(title, content) => handleUpdate(prompt.id, title, content)}
-                            onDiscard={handleDiscard}
-                            previewLimits={getPreviewLimits()}
-                          />
-                        );
-                      })}
-                    </div>
-                  ))
-                )}
-              </div>
-            );
-          })()
-        )}
+          {/* Empty State */}
+          {prompts.length === 0 && !isCreating && !loading && (
+            <div className="text-center py-12 text-pink-400">
+              {contentQuery || titleQuery
+                ? 'No prompts match your search'
+                : 'No prompts yet. Create one!'}
+            </div>
+          )}
+
+          {/* Existing Prompts */}
+          {prompts.map((prompt, index) => (
+            <div key={prompt.id} style={{ breakInside: 'avoid', marginBottom: '1rem' }}>
+              <PromptCard
+                prompt={prompt}
+                colorIndex={index}
+                isAuthenticated={isAuthenticated}
+                isEditing={editingId === prompt.id}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onSave={(title, content) => handleUpdate(prompt.id, title, content)}
+                onDiscard={handleDiscard}
+                previewLimits={getPreviewLimits()}
+              />
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Login Dialog */}
