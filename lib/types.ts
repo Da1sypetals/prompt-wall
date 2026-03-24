@@ -4,6 +4,7 @@ export interface Prompt {
   content: string;
   createdAt: string;
   updatedAt?: string;
+  pinnedOrder?: number;
 }
 
 export interface PromptWallData {

@@ -10,6 +10,16 @@ import { LoginDialog } from '@/components/LoginDialog';
 import { ViewModeSlider } from '@/components/ViewModeSlider';
 import { Prompt } from '@/lib/types';
 
+function distributePrompts(prompts: Prompt[], columnCount: number): Prompt[][] {
+  const columns = Array.from({ length: columnCount }, () => [] as Prompt[]);
+
+  prompts.forEach((prompt, index) => {
+    columns[index % columnCount].push(prompt);
+  });
+
+  return columns;
+}
+
 export default function Home() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +32,18 @@ export default function Home() {
   const [newPromptTitle, setNewPromptTitle] = useState('');
   const [newPromptContent, setNewPromptContent] = useState('');
   const [viewMode, setViewMode] = useState<'single' | 'double' | 'triple'>('triple');
+
+  // Get column count based on view mode
+  const getColumnCount = () => {
+    switch (viewMode) {
+      case 'single':
+        return 1;
+      case 'double':
+        return 2;
+      case 'triple':
+        return 3;
+    }
+  };
 
   // Check auth status on mount
   useEffect(() => {
@@ -131,6 +153,19 @@ export default function Home() {
     }
   };
 
+  // Pin / bubble / unpin prompt
+  const handlePin = async (id: string, action: 'pin' | 'bubble' | 'unpin') => {
+    const response = await fetch(`/api/prompts/${id}/pin`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    });
+
+    if (response.ok) {
+      fetchPrompts();
+    }
+  };
+
   // Edit handler
   const handleEdit = (prompt: Prompt) => {
     setEditingId(prompt.id);
@@ -174,17 +209,10 @@ export default function Home() {
     }
   };
 
-  // Get column count based on view mode
-  const getColumnCount = () => {
-    switch (viewMode) {
-      case 'single':
-        return 1;
-      case 'double':
-        return 2;
-      case 'triple':
-        return 3;
-    }
-  };
+  const columnCount = getColumnCount();
+  const previewLimits = getPreviewLimits();
+  const promptColumns = distributePrompts(prompts, columnCount);
+  const promptColorIndices = new Map(prompts.map((prompt, index) => [prompt.id, index]));
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-fuchsia-50">
@@ -257,16 +285,15 @@ export default function Home() {
           )}
         </div>
 
-        {/* Prompts Grid - CSS Masonry Layout */}
-        <div 
-          className="gap-4"
-          style={{
-            columnCount: getColumnCount(),
-            columnGap: '1rem',
-          }}
-        >
-          {/* New Prompt Card (always at top when creating) */}
-          {isCreating && (
+        {/* New Prompt Card (always at top when creating) */}
+        {isCreating && (
+          <div
+            className="mb-4"
+            style={{
+              columnCount,
+              columnGap: '1rem',
+            }}
+          >
             <div style={{ breakInside: 'avoid', marginBottom: '1rem' }}>
               <PromptCard
                 colorIndex={0}
@@ -282,34 +309,47 @@ export default function Home() {
                 }}
               />
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Empty State */}
-          {prompts.length === 0 && !isCreating && !loading && (
-            <div className="text-center py-12 text-pink-400">
-              {contentQuery || titleQuery
-                ? 'No prompts match your search'
-                : 'No prompts yet. Create one!'}
-            </div>
-          )}
+        {/* Empty State */}
+        {prompts.length === 0 && !isCreating && !loading && (
+          <div className="text-center py-12 text-pink-400">
+            {contentQuery || titleQuery
+              ? 'No prompts match your search'
+              : 'No prompts yet. Create one!'}
+          </div>
+        )}
 
-          {/* Existing Prompts */}
-          {prompts.map((prompt, index) => (
-            <div key={prompt.id} style={{ breakInside: 'avoid', marginBottom: '1rem' }}>
-              <PromptCard
-                prompt={prompt}
-                colorIndex={index}
-                isAuthenticated={isAuthenticated}
-                isEditing={editingId === prompt.id}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onSave={(title, content) => handleUpdate(prompt.id, title, content)}
-                onDiscard={handleDiscard}
-                previewLimits={getPreviewLimits()}
-              />
-            </div>
-          ))}
-        </div>
+        {/* Existing Prompts */}
+        {prompts.length > 0 && (
+          <div
+            className="grid items-start gap-4"
+            style={{
+              gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+            }}
+          >
+            {promptColumns.map((columnPrompts, columnIndex) => (
+              <div key={`prompt-column-${columnIndex}`} className="flex min-w-0 flex-col gap-4">
+                {columnPrompts.map((prompt) => (
+                  <PromptCard
+                    key={prompt.id}
+                    prompt={prompt}
+                    colorIndex={promptColorIndices.get(prompt.id) ?? 0}
+                    isAuthenticated={isAuthenticated}
+                    isEditing={editingId === prompt.id}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onSave={(title, content) => handleUpdate(prompt.id, title, content)}
+                    onDiscard={handleDiscard}
+                    onPin={isAuthenticated ? handlePin : undefined}
+                    previewLimits={previewLimits}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Login Dialog */}

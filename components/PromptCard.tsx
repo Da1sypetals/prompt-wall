@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Copy, Pencil, Trash2, Check, X, Save, ChevronDown, ChevronUp } from 'lucide-react';
+import { Copy, Pencil, Trash2, Check, X, Save, ChevronDown, ChevronUp, Pin, ArrowUpCircle, PinOff } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,7 @@ interface PromptCardProps {
   onSave?: (title: string, content: string) => void;
   onDiscard?: () => void;
   onChange?: (title: string, content: string) => void;
+  onPin?: (id: string, action: 'pin' | 'bubble' | 'unpin') => void;
   previewLimits?: PreviewLimits;
 }
 
@@ -76,6 +77,7 @@ export function PromptCard({
   onSave,
   onDiscard,
   onChange,
+  onPin,
   previewLimits = { maxChars: 150, maxLines: 8 },
 }: PromptCardProps) {
   const [copied, setCopied] = useState(false);
@@ -169,11 +171,42 @@ export function PromptCard({
   const needsExpandButton = isTruncated || prompt.content.length > previewLimits.maxChars || prompt.content.split('\n').length > previewLimits.maxLines;
   const displayContent = isExpanded ? prompt.content : previewText;
 
+  const isPinned = prompt.pinnedOrder !== undefined;
+
   return (
-    <Card className={`${colors.bg} ${colors.border} border-2 transition-all hover:shadow-lg overflow-hidden p-0`}>
+    <Card className={`${colors.bg} ${colors.border} border-2 transition-all hover:shadow-lg overflow-hidden p-0 relative`}>
+      {/* Left side: Pin/Unpin/Bubble buttons (only visible with edit permission) */}
+      {isAuthenticated && onPin && (
+        <div className="absolute left-0 top-0 bottom-0 flex flex-col gap-1 py-2 pl-1 pr-0 z-20" onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onPin(prompt.id, isPinned ? 'unpin' : 'pin')}
+            className={`h-7 w-7 ${colors.title} hover:bg-black/10`}
+            title={isPinned ? 'Unpin' : 'Pin to end'}
+          >
+            {isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onPin(prompt.id, 'bubble')}
+            className={`h-7 w-7 ${colors.title} hover:bg-black/10`}
+            title="Bubble to top"
+          >
+            <ArrowUpCircle className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
+      {/* Pin badge - top left corner */}
+      {isPinned && (
+        <div className="absolute -left-1 -top-1 z-10">
+          <Pin className={`h-5 w-5 ${colors.title} rotate-[-45deg]`} fill="currentColor" />
+        </div>
+      )}
       {/* Header with darker background - click to copy */}
       <div 
-        className={`${colors.headerBg} px-6 pt-5 pb-3 cursor-pointer`}
+        className={`${colors.headerBg} px-6 pt-5 pb-3 cursor-pointer ${isAuthenticated && onPin ? 'pl-10' : ''}`}
         onClick={handleCopy}
       >
         <div className="flex items-start justify-between">
@@ -225,7 +258,7 @@ export function PromptCard({
         </div>
       </div>
       {/* Content with normal background */}
-      <CardContent className="px-6 pt-4 pb-6">
+      <CardContent className={`px-6 pt-4 pb-6 ${isAuthenticated && onPin ? 'pl-10' : ''}`}>
         <p className={`${colors.text} whitespace-pre-wrap`}>{displayContent}</p>
         {!isExpanded && isTruncated && (
           <p className={`${colors.text} mt-1`}>...</p>

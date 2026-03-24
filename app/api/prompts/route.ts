@@ -8,26 +8,34 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const titleQuery = searchParams.get('title')?.toLowerCase();
     const contentQuery = searchParams.get('content')?.toLowerCase();
-    
+
     const data = await getPromptWallData();
     let prompts = data.prompts;
-    
+
     // Filter by title substring
     if (titleQuery) {
-      prompts = prompts.filter((p: Prompt) => 
+      prompts = prompts.filter((p: Prompt) =>
         p.title.toLowerCase().includes(titleQuery)
       );
     }
-    
+
     // Filter by content substring
     if (contentQuery) {
-      prompts = prompts.filter((p: Prompt) => 
+      prompts = prompts.filter((p: Prompt) =>
         p.content.toLowerCase().includes(contentQuery)
       );
     }
-    
+
+    // Sort: pinned by pinnedOrder asc, then unpinned by createdAt desc
+    prompts = [...prompts].sort((a: Prompt, b: Prompt) => {
+      const aPinned = a.pinnedOrder ?? Infinity;
+      const bPinned = b.pinnedOrder ?? Infinity;
+      if (aPinned !== bPinned) return aPinned - bPinned;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
     return NextResponse.json({ success: true, data: prompts });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Failed to fetch prompts' },
       { status: 500 }
@@ -61,7 +69,7 @@ export async function POST(request: NextRequest) {
     await setPromptWallData(data);
     
     return NextResponse.json({ success: true, data: newPrompt }, { status: 201 });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Failed to create prompt' },
       { status: 500 }
