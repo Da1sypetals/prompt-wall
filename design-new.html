@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New Prompt — Prompt Wall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #FDF7F8;
+    --cream-deep: #F8EDEF;
+    --espresso: #3B282C;
+    --espresso-soft: #93737B;
+    --sage: #E3AEB8;
+    --rose-deep: #9C5A6B;
+    --hairline: rgba(59, 40, 44, 0.08);
+    --spring: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--cream);
+    color: var(--espresso);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  ::selection { background: var(--sage); color: var(--cream); }
+
+  /* ================= FLOATING ISLAND NAV ================= */
+  .nav-shell {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    padding: 6px;
+    border-radius: 999px;
+    background: rgba(59, 40, 44, 0.04);
+    border: 1px solid var(--hairline);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+
+  .nav-core {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px 8px 22px;
+    border-radius: 999px;
+    background: rgba(253, 247, 248, 0.85);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  }
+
+  .nav-logo {
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    margin-right: 16px;
+    text-decoration: none;
+    color: var(--espresso);
+  }
+
+  .nav-logo em { font-style: italic; font-weight: 300; }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    background: transparent;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--espresso-soft);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.7s var(--spring);
+  }
+
+  .btn-ghost svg { width: 13px; height: 13px; stroke: currentColor; }
+
+  .btn-ghost:hover { background: rgba(59, 40, 44, 0.04); color: var(--espresso); }
+
+  /* ================= EDITOR LAYOUT ================= */
+  .editor {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 160px 6vw 120px;
+  }
+
+  .editor-head {
+    padding-bottom: 40px;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: max-content;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--espresso-soft);
+    margin-bottom: 28px;
+  }
+
+  .eyebrow .dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--sage);
+  }
+
+  /* ---- borderless serif title input ---- */
+  .title-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: clamp(32px, 4.5vw, 52px);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+    color: var(--espresso);
+  }
+
+  .title-input::placeholder {
+    color: var(--espresso-soft);
+    opacity: 0.45;
+    font-style: italic;
+  }
+
+  /* ---- content double-bezel ---- */
+  .content-shell {
+    margin-top: 48px;
+    padding: 6px;
+    border-radius: 28px;
+    background: rgba(59, 40, 44, 0.03);
+    border: 1px solid var(--hairline);
+    transition: border-color 0.7s var(--spring);
+  }
+
+  .content-shell:focus-within {
+    border-color: rgba(156, 90, 107, 0.35);
+  }
+
+  .content-core {
+    padding: 36px 40px;
+    border-radius: 22px;
+    background: #FFFFFF;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  }
+
+  .content-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--espresso-soft);
+    margin-bottom: 20px;
+  }
+
+  .content-input {
+    width: 100%;
+    min-height: 260px;
+    border: none;
+    outline: none;
+    resize: none;
+    background: transparent;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 15.5px;
+    line-height: 1.9;
+    color: var(--espresso);
+  }
+
+  .content-input::placeholder {
+    color: var(--espresso-soft);
+    opacity: 0.5;
+  }
+
+  .content-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--hairline);
+    font-size: 12px;
+    color: var(--espresso-soft);
+    letter-spacing: 0.04em;
+  }
+
+  /* ---- actions ---- */
+  .actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    margin-top: 40px;
+  }
+
+  .btn-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    padding: 6px 6px 6px 24px;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    background: var(--espresso);
+    color: var(--cream);
+    transition: transform 0.7s var(--spring), background 0.7s var(--spring);
+  }
+
+  .btn-pill .icon-orb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(253, 247, 248, 0.14);
+    transition: transform 0.7s var(--spring), background 0.7s var(--spring);
+  }
+
+  .btn-pill .icon-orb svg { width: 13px; height: 13px; stroke: var(--cream); }
+
+  .btn-pill:hover { background: var(--rose-deep); }
+  .btn-pill:hover .icon-orb {
+    transform: translate(3px, -2px) scale(1.06);
+    background: rgba(253, 247, 248, 0.24);
+  }
+
+  .btn-pill:active { transform: scale(0.98); }
+
+  .btn-pill.saved { background: #F3DDE2; color: var(--rose-deep); }
+  .btn-pill.saved .icon-orb { background: rgba(156, 90, 107, 0.14); }
+  .btn-pill.saved .icon-orb svg { stroke: var(--rose-deep); }
+
+  /* ================= SCROLL REVEAL ================= */
+  .reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    filter: blur(5px);
+    transition: opacity 1s var(--spring), transform 1s var(--spring), filter 1s var(--spring);
+  }
+
+  .reveal.in {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+
+  /* ================= FOOTER ================= */
+  footer {
+    padding: 0 6vw 64px;
+    font-size: 12px;
+    color: var(--espresso-soft);
+    letter-spacing: 0.04em;
+    text-align: center;
+  }
+
+  footer .f-serif { font-family: 'Fraunces', serif; font-style: italic; font-size: 14px; }
+
+  /* ================= MOBILE ================= */
+  @media (max-width: 768px) {
+    .editor { padding: 130px 20px 96px; }
+    .content-core { padding: 28px 22px; }
+    .actions { flex-direction: column-reverse; align-items: stretch; }
+    .btn-pill, .btn-ghost { justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- FLOATING ISLAND NAV -->
+<nav class="nav-shell">
+  <div class="nav-core">
+    <a class="nav-logo" href="design-mockup.html">Prompt <em>Wall</em></a>
+    <a class="btn-ghost" href="design-mockup.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M19 12H5M5 12l6-6M5 12l6 6"/></svg>
+      返回墙
+    </a>
+  </div>
+</nav>
+
+<main class="editor">
+
+  <div class="editor-head reveal">
+    <div class="eyebrow"><span class="dot"></span>New Prompt</div>
+    <input class="title-input" type="text" placeholder="给这条提示词起个名字" autofocus>
+  </div>
+
+  <div class="content-shell reveal">
+    <div class="content-core">
+      <label class="content-label" for="contentInput">Prompt 内容</label>
+      <textarea class="content-input" id="contentInput" placeholder="在这里编写完整的提示词……"></textarea>
+      <div class="content-foot">
+        <span id="charCount">0 字</span>
+        <span>支持多行文本</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions reveal">
+    <a class="btn-ghost" href="design-mockup.html">取消</a>
+    <button class="btn-pill" id="saveBtn">
+      <span id="saveLabel">保存 Prompt</span>
+      <span class="icon-orb">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+      </span>
+    </button>
+  </div>
+
+</main>
+
+<footer>
+  <span class="f-serif">Prompt Wall</span>
+</footer>
+
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.01 });
+
+  document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+
+  /* ---- 字数统计 + 自动增高 ---- */
+  const textarea = document.getElementById('contentInput');
+  const charCount = document.getElementById('charCount');
+
+  textarea.addEventListener('input', () => {
+    charCount.textContent = textarea.value.length + ' 字';
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.max(260, textarea.scrollHeight) + 'px';
+  });
+
+  /* ---- 保存（mock） ---- */
+  const saveBtn = document.getElementById('saveBtn');
+  const saveLabel = document.getElementById('saveLabel');
+
+  saveBtn.addEventListener('click', () => {
+    saveBtn.classList.add('saved');
+    saveLabel.textContent = '已保存';
+    setTimeout(() => {
+      saveBtn.classList.remove('saved');
+      saveLabel.textContent = '保存 Prompt';
+    }, 1600);
+  });
+</script>
+
+</body>
+</html>

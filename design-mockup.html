@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt Wall — Design Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #FDF7F8;
+    --cream-deep: #F8EDEF;
+    --espresso: #3B282C;
+    --espresso-soft: #93737B;
+    --sage: #E3AEB8;
+    --rose-deep: #9C5A6B;
+    --hairline: rgba(59, 40, 44, 0.08);
+    --spring: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--cream);
+    color: var(--espresso);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ---- film grain overlay (fixed, pointer-events none) ---- */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  ::selection { background: var(--sage); color: var(--cream); }
+
+  /* ================= FLOATING ISLAND NAV ================= */
+  .nav-shell {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    padding: 6px;
+    border-radius: 999px;
+    background: rgba(59, 40, 44, 0.04);
+    border: 1px solid var(--hairline);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+
+  .nav-core {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px 8px 22px;
+    border-radius: 999px;
+    background: rgba(253, 247, 248, 0.85);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  }
+
+  .nav-logo {
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    margin-right: 16px;
+  }
+
+  .nav-logo em { font-style: italic; font-weight: 300; }
+
+  .nav-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: rgba(59, 40, 44, 0.04);
+    border: 1px solid var(--hairline);
+    min-width: 240px;
+  }
+
+  .nav-search svg { width: 14px; height: 14px; stroke: var(--espresso-soft); flex-shrink: 0; }
+
+  .nav-search input {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 13px;
+    color: var(--espresso);
+    width: 100%;
+  }
+
+  .nav-search input::placeholder { color: var(--espresso-soft); opacity: 0.6; }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    padding: 12px 20px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    background: transparent;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--espresso-soft);
+    cursor: pointer;
+    transition: all 0.7s var(--spring);
+  }
+
+  .btn-ghost:hover { background: rgba(59, 40, 44, 0.04); color: var(--espresso); }
+
+  /* ================= HEADER ================= */
+  .hero {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 140px 6vw 32px;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .hero h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: 28px;
+    letter-spacing: -0.01em;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    font-weight: 300;
+    color: var(--espresso-soft);
+  }
+
+  .hero-count {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--espresso-soft);
+    white-space: nowrap;
+  }
+
+  /* ================= WALL (UNIFORM 3-COL GRID) ================= */
+  .wall {
+    position: relative;
+    padding: 40px 6vw 160px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  /* ---- double-bezel card ---- */
+  .card-shell {
+    display: block;
+    padding: 6px;
+    border-radius: 28px;
+    background: rgba(59, 40, 44, 0.03);
+    border: 1px solid var(--hairline);
+    cursor: pointer;
+    transition: transform 0.8s var(--spring), background 0.8s var(--spring), opacity 0.4s var(--spring);
+  }
+
+  .card-core {
+    height: 100%;
+    min-height: 190px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 32px;
+    padding: 24px 26px;
+    border-radius: 22px;
+    background: #FFFFFF;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  }
+
+  .card-shell:hover {
+    transform: translateY(-6px);
+    background: rgba(59, 40, 44, 0.05);
+  }
+
+  .card-shell:active { transform: translateY(-2px) scale(0.99); }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-index {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--espresso-soft);
+    opacity: 0.7;
+  }
+
+  /* ---- drag grip handle ---- */
+  .card-grip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    margin: -6px -8px -6px 0;
+    border-radius: 50%;
+    color: var(--espresso-soft);
+    opacity: 0;
+    cursor: grab;
+    transition: opacity 0.5s var(--spring), background 0.5s var(--spring);
+    touch-action: none;
+  }
+
+  .card-shell:hover .card-grip { opacity: 0.55; }
+  .card-grip:hover { opacity: 1 !important; background: rgba(59, 40, 44, 0.05); }
+  .card-grip:active { cursor: grabbing; }
+
+  .card-grip svg { width: 14px; height: 14px; fill: currentColor; }
+
+  /* ---- dragging states ---- */
+  body.dragging { user-select: none; }
+
+  /* 被拖起的卡片：浮起跟随鼠标 */
+  .card-shell.drag-float {
+    pointer-events: none;
+    cursor: grabbing;
+    box-shadow: 0 24px 48px -16px rgba(59, 40, 44, 0.22);
+  }
+
+  /* 列表中预留的空槽，实时指示落点 */
+  .card-spacer {
+    border-radius: 28px;
+    border: 1.5px dashed rgba(227, 174, 184, 0.6);
+    background: rgba(227, 174, 184, 0.08);
+  }
+
+  .card-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: 20px;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+
+  /* ---- card bottom actions ---- */
+  .card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 4px 4px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    background: transparent;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    color: var(--espresso-soft);
+    cursor: pointer;
+    transition: all 0.7s var(--spring);
+  }
+
+  .card-copy .icon-orb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(59, 40, 44, 0.05);
+    transition: all 0.7s var(--spring);
+  }
+
+  .card-copy .icon-orb svg { width: 11px; height: 11px; stroke: var(--espresso); transition: stroke 0.7s var(--spring); }
+
+  .card-shell:hover .card-copy { color: var(--espresso); }
+  .card-shell:hover .card-copy .icon-orb { background: var(--espresso); transform: scale(1.06); }
+  .card-shell:hover .card-copy .icon-orb svg { stroke: var(--cream); }
+
+  .card-copy.copied { background: #F3DDE2; color: var(--rose-deep); border-color: rgba(156, 90, 107, 0.28); }
+  .card-copy.copied .icon-orb { background: rgba(156, 90, 107, 0.14); }
+  .card-copy.copied .icon-orb svg { stroke: var(--rose-deep); }
+
+  .card-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(59, 40, 44, 0.04);
+    transition: transform 0.7s var(--spring), background 0.7s var(--spring);
+  }
+
+  .card-arrow svg { width: 13px; height: 13px; stroke: var(--espresso); transition: stroke 0.7s var(--spring); }
+
+  .card-arrow:hover {
+    transform: translate(3px, -3px);
+    background: var(--espresso);
+  }
+
+  .card-arrow:hover svg { stroke: var(--cream); }
+
+  /* ---- new prompt card (dashed invitation) ---- */
+  .card-new { cursor: pointer; text-decoration: none; color: inherit; }
+
+  .card-new .card-core {
+    background: transparent;
+    box-shadow: none;
+    border: 1px dashed rgba(59, 40, 44, 0.2);
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .card-new .plus-orb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(59, 40, 44, 0.05);
+    transition: transform 0.7s var(--spring), background 0.7s var(--spring);
+  }
+
+  .card-new .plus-orb svg { width: 16px; height: 16px; stroke: var(--espresso); }
+
+  .card-new:hover .plus-orb { transform: rotate(90deg); background: var(--espresso); }
+  .card-new:hover .plus-orb svg { stroke: var(--cream); }
+
+  .card-new span {
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--espresso-soft);
+  }
+
+  /* ================= SCROLL REVEAL ================= */
+  .reveal {
+    opacity: 0;
+    transform: translateY(48px);
+    filter: blur(6px);
+    transition: opacity 1s var(--spring), transform 1s var(--spring), filter 1s var(--spring);
+  }
+
+  .reveal.in {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+
+  /* ================= FOOTER ================= */
+  footer {
+    padding: 0 6vw 64px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--espresso-soft);
+    letter-spacing: 0.04em;
+  }
+
+  footer .f-serif { font-family: 'Fraunces', serif; font-style: italic; font-size: 14px; }
+
+  /* ================= MOBILE ================= */
+  @media (max-width: 1024px) {
+    .wall { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 768px) {
+    .nav-search { min-width: 0; width: 120px; }
+    .nav-logo { margin-right: 4px; }
+    .hero { padding: 120px 24px 24px; }
+    .wall { grid-template-columns: 1fr; padding: 24px 16px 120px; gap: 16px; }
+    .card-grip { opacity: 0.55; }
+    footer { flex-direction: column; gap: 12px; padding: 0 24px 48px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- FLOATING ISLAND NAV -->
+<nav class="nav-shell">
+  <div class="nav-core">
+    <div class="nav-logo">Prompt <em>Wall</em></div>
+    <div class="nav-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input type="text" placeholder="搜索标题…">
+    </div>
+    <button class="btn-ghost">登录</button>
+  </div>
+</nav>
+
+<!-- HEADER -->
+<header class="hero">
+  <h1>Prompt <em>Wall</em></h1>
+  <span class="hero-count">— 共 8 条提示词</span>
+</header>
+
+<!-- WALL -->
+<main class="wall" id="wall">
+
+  <div class="card-shell reveal">
+    <div class="card-core">
+      <div class="card-top">
+        <span class="card-index">No. 001</span>
+        <span class="card-grip" title="拖拽排序"><svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+      </div>
+      <h2 class="card-title">把周报写成一部微型推理小说</h2>
+      <div class="card-actions">
+        <button class="card-copy">
+          <span class="copy-label">复制</span>
+          <span class="icon-orb"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></span>
+        </button>
+        <a class="card-arrow" href="design-detail.html" title="查看详情"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-shell reveal" style="transition-delay: 60ms">
+    <div class="card-core">
+      <div class="card-top">
+        <span class="card-index">No. 002</span>
+        <span class="card-grip" title="拖拽排序"><svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+      </div>
+      <h2 class="card-title">代码评审员的苏格拉底式提问</h2>
+      <div class="card-actions">
+        <button class="card-copy">
+          <span class="copy-label">复制</span>
+          <span class="icon-orb"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></span>
+        </button>
+        <a class="card-arrow" href="design-detail.html" title="查看详情"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-shell reveal" style="transition-delay: 120ms">
+    <div class="card-core">
+      <div class="card-top">
+        <span class="card-index">No. 003</span>
+        <span class="card-grip" title="拖拽排序"><svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+      </div>
+      <h2 class="card-title">用菜谱的逻辑解释递归</h2>
+      <div class="card-actions">
+        <button class="card-copy">
+          <span class="copy-label">复制</span>
+          <span class="icon-orb"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></span>
+        </button>
+        <a class="card-arrow" href="design-detail.html" title="查看详情"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-shell reveal">
+    <div class="card-core">
+      <div class="card-top">
+        <span class="card-index">No. 004</span>
+        <span class="card-grip" title="拖拽排序"><svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+      </div>
+      <h2 class="card-title">给十年后的自己写一封产品需求文档</h2>
+      <div class="card-actions">
+        <button class="card-copy">
+          <span class="copy-label">复制</span>
+          <span class="icon-orb"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></span>
+        </button>
+        <a class="card-arrow" href="design-detail.html" title="查看详情"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-shell reveal" style="transition-delay: 60ms">
+    <div class="card-core">
+      <div class="card-top">
+        <span class="card-index">No. 005</span>
+        <span class="card-grip" title="拖拽排序"><svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+      </div>
+      <h2 class="card-title">把会议纪要压缩成三行俳句</h2>
+      <div class="card-actions">
+        <button class="card-copy">
+          <span class="copy-label">复制</span>
+          <span class="icon-orb"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></span>
+        </button>
+        <a class="card-arrow" href="design-detail.html" title="查看详情"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-shell reveal" style="transition-delay: 120ms">
+    <div class="card-core">
+      <div class="card-top">
+        <span class="card-index">No. 006</span>
+        <span class="card-grip" title="拖拽排序"><svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+      </div>
+      <h2 class="card-title">扮演一位挑剔的博物馆策展人来审视我的作品集</h2>
+      <div class="card-actions">
+        <button class="card-copy">
+          <span class="copy-label">复制</span>
+          <span class="icon-orb"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></span>
+        </button>
+        <a class="card-arrow" href="design-detail.html" title="查看详情"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-shell reveal">
+    <div class="card-core">
+      <div class="card-top">
+        <span class="card-index">No. 007</span>
+        <span class="card-grip" title="拖拽排序"><svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+      </div>
+      <h2 class="card-title">调试时的橡皮鸭，但它会反问</h2>
+      <div class="card-actions">
+        <button class="card-copy">
+          <span class="copy-label">复制</span>
+          <span class="icon-orb"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></span>
+        </button>
+        <a class="card-arrow" href="design-detail.html" title="查看详情"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg></a>
+      </div>
+    </div>
+  </div>
+
+  <a class="card-shell card-new reveal" style="transition-delay: 60ms" href="design-new.html">
+    <div class="card-core">
+      <span class="plus-orb"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg></span>
+      <span>New Prompt</span>
+    </div>
+  </a>
+
+</main>
+
+<footer>
+  <span class="f-serif">Prompt Wall</span>
+</footer>
+
+<script>
+  /* ---------- scroll reveal ---------- */
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+
+  /* ---------- copy: whole card is the copy target ---------- */
+  function flashCopied(btn) {
+    btn.classList.add('copied');
+    btn.querySelector('.copy-label').textContent = '已复制';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.querySelector('.copy-label').textContent = '复制';
+    }, 1600);
+  }
+
+  document.querySelectorAll('.card-shell:not(.card-new)').forEach((card) => {
+    card.addEventListener('click', (e) => {
+      // 箭头进详情、抓手拖拽，不触发复制
+      if (e.target.closest('.card-arrow') || e.target.closest('.card-grip')) return;
+      flashCopied(card.querySelector('.card-copy'));
+    });
+  });
+
+  /* ---------- 歌单式拖拽排序（抓手） ---------- */
+  const wall = document.getElementById('wall');
+  let drag = null; // { card, spacer, offsetX, offsetY }
+
+  /* FLIP：记录位置 → 变更 DOM → 反向偏移 → 过渡回 0（跳过被拖卡片） */
+  function flip(mutate) {
+    const cards = [...wall.querySelectorAll('.card-shell')];
+    const firstRects = new Map(cards.map((el) => [el, el.getBoundingClientRect()]));
+    mutate();
+    cards.forEach((el) => {
+      if (drag && el === drag.card) return;
+      const first = firstRects.get(el);
+      const last = el.getBoundingClientRect();
+      const dx = first.left - last.left;
+      const dy = first.top - last.top;
+      if (!dx && !dy) return;
+      el.style.transition = 'none';
+      el.style.transform = `translate(${dx}px, ${dy}px)`;
+      requestAnimationFrame(() => {
+        el.style.transition = 'transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)';
+        el.style.transform = '';
+        el.addEventListener('transitionend', function cleanup() {
+          el.style.transition = '';
+          el.removeEventListener('transitionend', cleanup);
+        });
+      });
+    });
+  }
+
+  function onDragMove(e) {
+    if (!drag) return;
+    const { card, spacer, offsetX, offsetY } = drag;
+    card.style.left = (e.clientX - offsetX) + 'px';
+    card.style.top = (e.clientY - offsetY) + 'px';
+
+    // 用布局坐标（offsetLeft/Top，不受 FLIP transform 影响）判定指针落在哪张卡片的格子内
+    const wallRect = wall.getBoundingClientRect();
+    const px = e.clientX - wallRect.left;
+    const py = e.clientY - wallRect.top;
+    let target = null;
+    for (const el of wall.querySelectorAll('.card-shell')) {
+      if (el === card || el.classList.contains('card-new')) continue;
+      if (px >= el.offsetLeft && px <= el.offsetLeft + el.offsetWidth &&
+          py >= el.offsetTop && py <= el.offsetTop + el.offsetHeight) {
+        target = el;
+        break;
+      }
+    }
+    if (!target) return;
+    // 拖到某张卡片上 = 空槽换到它的位置，它往空槽方向让位
+    if (spacer.compareDocumentPosition(target) & Node.DOCUMENT_POSITION_FOLLOWING) {
+      if (target.nextSibling !== spacer) flip(() => wall.insertBefore(spacer, target.nextSibling));
+    } else {
+      if (target.previousSibling !== spacer) flip(() => wall.insertBefore(spacer, target));
+    }
+  }
+
+  function onDragEnd() {
+    window.removeEventListener('pointermove', onDragMove);
+    if (!drag) return;
+    const { card, spacer } = drag;
+    drag = null;
+    document.body.classList.remove('dragging');
+
+    // 飞入空槽，然后落位
+    const dest = spacer.getBoundingClientRect();
+    const current = card.getBoundingClientRect();
+    card.style.transition = 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)';
+    card.style.transform = `translate(${dest.left - current.left}px, ${dest.top - current.top}px)`;
+    card.addEventListener('transitionend', function done() {
+      card.removeEventListener('transitionend', done);
+      wall.insertBefore(card, spacer);
+      spacer.remove();
+      card.classList.remove('drag-float');
+      ['position', 'left', 'top', 'width', 'margin', 'z-index', 'transition', 'transform']
+        .forEach((p) => card.style.removeProperty(p));
+    });
+  }
+
+  wall.querySelectorAll('.card-grip').forEach((grip) => {
+    grip.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      const card = grip.closest('.card-shell');
+      const rect = card.getBoundingClientRect();
+
+      const spacer = document.createElement('div');
+      spacer.className = 'card-spacer';
+      spacer.style.height = rect.height + 'px';
+
+      drag = { card, spacer, offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top };
+
+      wall.insertBefore(spacer, card);
+      card.classList.add('drag-float');
+      Object.assign(card.style, {
+        position: 'fixed',
+        left: rect.left + 'px',
+        top: rect.top + 'px',
+        width: rect.width + 'px',
+        margin: '0',
+        zIndex: 30,
+      });
+      document.body.classList.add('dragging');
+
+      window.addEventListener('pointermove', onDragMove);
+      window.addEventListener('pointerup', onDragEnd, { once: true });
+      window.addEventListener('pointercancel', onDragEnd, { once: true });
+    });
+  });
+</script>
+
+</body>
+</html>

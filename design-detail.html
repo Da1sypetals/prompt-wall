@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>把周报写成一部微型推理小说 — Prompt Wall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #FDF7F8;
+    --cream-deep: #F8EDEF;
+    --espresso: #3B282C;
+    --espresso-soft: #93737B;
+    --sage: #E3AEB8;
+    --rose-deep: #9C5A6B;
+    --hairline: rgba(59, 40, 44, 0.08);
+    --spring: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--cream);
+    color: var(--espresso);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  ::selection { background: var(--sage); color: var(--cream); }
+
+  /* ================= FLOATING ISLAND NAV ================= */
+  .nav-shell {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    padding: 6px;
+    border-radius: 999px;
+    background: rgba(59, 40, 44, 0.04);
+    border: 1px solid var(--hairline);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+
+  .nav-core {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px 8px 22px;
+    border-radius: 999px;
+    background: rgba(253, 247, 248, 0.85);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  }
+
+  .nav-logo {
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    margin-right: 16px;
+    text-decoration: none;
+    color: var(--espresso);
+  }
+
+  .nav-logo em { font-style: italic; font-weight: 300; }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    background: transparent;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--espresso-soft);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.7s var(--spring);
+  }
+
+  .btn-ghost svg { width: 13px; height: 13px; stroke: currentColor; }
+
+  .btn-ghost:hover { background: rgba(59, 40, 44, 0.04); color: var(--espresso); }
+
+  /* ================= DETAIL LAYOUT ================= */
+  .detail {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 160px 6vw 120px;
+  }
+
+  .detail-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 32px;
+    padding-bottom: 40px;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .detail-index {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 12px;
+    color: var(--espresso-soft);
+    margin-bottom: 28px;
+  }
+
+  .detail-index .dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--sage);
+  }
+
+  .detail h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: clamp(32px, 4.5vw, 52px);
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+  }
+
+  .detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-top: 24px;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--espresso-soft);
+  }
+
+  .detail-meta .sep {
+    width: 24px;
+    height: 1px;
+    background: var(--hairline);
+  }
+
+  /* ---- content double-bezel ---- */
+  .content-shell {
+    margin-top: 48px;
+    padding: 6px;
+    border-radius: 28px;
+    background: rgba(59, 40, 44, 0.03);
+    border: 1px solid var(--hairline);
+  }
+
+  .content-core {
+    padding: 48px 44px;
+    border-radius: 22px;
+    background: #FFFFFF;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  }
+
+  .content-core p {
+    font-size: 15.5px;
+    line-height: 1.9;
+    color: var(--espresso);
+    margin-bottom: 1.4em;
+    white-space: pre-wrap;
+  }
+
+  .content-core p:last-child { margin-bottom: 0; }
+
+  /* ---- header actions ---- */
+  .head-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .btn-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    background: transparent;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--espresso-soft);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.7s var(--spring);
+  }
+
+  .btn-edit svg { width: 12px; height: 12px; stroke: currentColor; }
+
+  .btn-edit:hover { background: rgba(59, 40, 44, 0.04); color: var(--espresso); }
+
+  /* ---- copy button (in header row, never overlaps content) ---- */
+  .btn-copy {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 5px 5px 5px 18px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    background: var(--cream);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--espresso);
+    cursor: pointer;
+    transition: transform 0.7s var(--spring), background 0.7s var(--spring);
+  }
+
+  .btn-copy .icon-orb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(59, 40, 44, 0.05);
+    transition: transform 0.7s var(--spring), background 0.7s var(--spring);
+  }
+
+  .btn-copy .icon-orb svg { width: 12px; height: 12px; stroke: var(--espresso); }
+
+  .btn-copy:hover { background: #FFFFFF; }
+  .btn-copy:hover .icon-orb { transform: scale(1.08); background: var(--espresso); }
+  .btn-copy:hover .icon-orb svg { stroke: var(--cream); }
+  .btn-copy:active { transform: scale(0.97); }
+
+  .btn-copy.copied { background: #F3DDE2; color: var(--rose-deep); border-color: rgba(156, 90, 107, 0.28); }
+  .btn-copy.copied .icon-orb { background: rgba(156, 90, 107, 0.14); }
+  .btn-copy.copied .icon-orb svg { stroke: var(--rose-deep); }
+
+  /* ================= SCROLL REVEAL ================= */
+  .reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    filter: blur(5px);
+    transition: opacity 1s var(--spring), transform 1s var(--spring), filter 1s var(--spring);
+  }
+
+  .reveal.in {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+
+  /* ================= FOOTER ================= */
+  footer {
+    padding: 0 6vw 64px;
+    font-size: 12px;
+    color: var(--espresso-soft);
+    letter-spacing: 0.04em;
+    text-align: center;
+  }
+
+  footer .f-serif { font-family: 'Fraunces', serif; font-style: italic; font-size: 14px; }
+
+  /* ================= MOBILE ================= */
+  @media (max-width: 768px) {
+    .detail { padding: 130px 20px 96px; }
+    .detail-head { flex-direction: column; align-items: flex-start; }
+    .content-core { padding: 32px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- FLOATING ISLAND NAV -->
+<nav class="nav-shell">
+  <div class="nav-core">
+    <a class="nav-logo" href="design-mockup.html">Prompt <em>Wall</em></a>
+    <a class="btn-ghost" href="design-mockup.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M19 12H5M5 12l6-6M5 12l6 6"/></svg>
+      返回墙
+    </a>
+  </div>
+</nav>
+
+<main class="detail">
+
+  <div class="detail-head reveal">
+    <div>
+      <div class="detail-index"><span class="dot"></span>No. 001</div>
+      <h1>把周报写成一部微型推理小说</h1>
+      <div class="detail-meta">
+        <span>2026.07.28</span>
+        <span class="sep"></span>
+        <span>Updated 2026.08.01</span>
+      </div>
+    </div>
+    <div class="head-actions">
+      <a class="btn-edit" href="design-edit.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+        编辑
+      </a>
+      <button class="btn-copy" id="copyBtn">
+        <span id="copyLabel">复制 Prompt</span>
+        <span class="icon-orb">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <div class="content-shell reveal" style="transition-delay: 100ms">
+    <div class="content-core">
+      <p>你是一位悬疑小说编辑。请把下面这份周报素材改写成一篇不超过 400 字的微型推理小说。</p>
+      <p>要求：
+1. 每项工作成果都是一个「线索」，读者需要在结尾才发现它们指向同一个真相——本周真正的里程碑；
+2. 障碍与阻塞写成「嫌疑人」，用物的视角（服务器、需求文档、日历）陈述证词；
+3. 结尾用一句话揭晓真相，语气克制，不许煽情。</p>
+      <p>素材如下：
+{在此粘贴你的周报要点}</p>
+    </div>
+  </div>
+
+
+</main>
+
+<footer>
+  <span class="f-serif">Prompt Wall</span>
+</footer>
+
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+
+  const copyBtn = document.getElementById('copyBtn');
+  const copyLabel = document.getElementById('copyLabel');
+  copyBtn.addEventListener('click', () => {
+    copyBtn.classList.add('copied');
+    copyLabel.textContent = '已复制';
+    setTimeout(() => {
+      copyBtn.classList.remove('copied');
+      copyLabel.textContent = '复制 Prompt';
+    }, 1600);
+  });
+</script>
+
+</body>
+</html>
