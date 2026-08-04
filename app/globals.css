@@ -257,14 +257,38 @@ body::after {
 
 .hero {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 20px;
   padding: 40px 6vw 32px;
   border-bottom: 1px solid var(--hairline);
 }
 
+/* New Prompt 按钮：与悬浮岛同结构同高 */
+.btn-new {
+  font: inherit;
+  cursor: pointer;
+  display: block;
+}
+
+.btn-new .nav-core {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 22px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--espresso);
+  transition: background 0.7s var(--spring);
+}
+
+.btn-new .nav-core svg { width: 14px; height: 14px; stroke: var(--espresso); }
+
+.btn-new:hover .nav-core { background: #FFFFFF; }
+
 .hero-count {
   margin-left: auto;
+  align-self: center;
   font-family: var(--font-fraunces), "Fraunces", serif;
   font-style: italic;
   font-size: 13px;
@@ -294,7 +318,7 @@ body::after {
 
 .card-split {
   display: flex;
-  min-height: 190px;
+  min-height: 148px;
   height: 100%;
 }
 
@@ -333,20 +357,6 @@ body::after {
 }
 
 .card-shell:active { transform: translateY(-2px) scale(0.99); }
-
-.card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.card-index {
-  font-family: var(--font-fraunces), "Fraunces", serif;
-  font-style: italic;
-  font-size: 13px;
-  color: var(--espresso-soft);
-  opacity: 0.7;
-}
 
 /* ---- drag grip handle：卡片右上角 ---- */
 .card-grip {
@@ -472,49 +482,6 @@ body.dragging { user-select: none; }
 }
 
 .card-zone-detail:hover .card-arrow svg { stroke: var(--cream); }
-
-/* ---- new prompt card (dashed invitation) ---- */
-.card-new { cursor: pointer; text-decoration: none; color: inherit; }
-
-.card-core {
-  height: 100%;
-  min-height: 190px;
-  display: flex;
-  flex-direction: column;
-}
-
-.card-new .card-core {
-  background: transparent;
-  box-shadow: none;
-  border: 1px dashed rgba(59, 40, 44, 0.2);
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-}
-
-.card-new .plus-orb {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: rgba(59, 40, 44, 0.05);
-  transition: transform 0.7s var(--spring), background 0.7s var(--spring);
-}
-
-.card-new .plus-orb svg { width: 16px; height: 16px; stroke: var(--espresso); }
-
-.card-new:hover .plus-orb { transform: rotate(90deg); background: var(--espresso); }
-.card-new:hover .plus-orb svg { stroke: var(--cream); }
-
-.card-new span {
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: var(--espresso-soft);
-}
 
 /* ================= DRAWER (DETAIL / EDIT SIDE PANEL) ================= */
 .drawer-overlay {

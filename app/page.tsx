@@ -5,6 +5,7 @@ import { flushSync } from 'react-dom';
 import Link from 'next/link';
 import { LoginDialog } from '@/components/LoginDialog';
 import { PromptDrawer } from '@/components/PromptDrawer';
+import { NewPromptDrawer } from '@/components/NewPromptDrawer';
 import { ArrowIcon, CopyIcon, GripIcon, PlusIcon, SearchIcon } from '@/components/icons';
 import { useReveal } from '@/lib/useReveal';
 import { sortPrompts } from '@/lib/format';
@@ -74,9 +75,6 @@ function Card({
     >
       <div className="card-split">
         <div className="card-zone-copy" onClick={() => onCopy(prompt)}>
-          <div className="card-top">
-            <span className="card-index">No. {String(index + 1).padStart(3, '0')}</span>
-          </div>
           <div className="card-text">
             <h2 className="card-title">{prompt.title}</h2>
             {preview && <p className="card-preview">{preview}</p>}
@@ -121,6 +119,7 @@ export default function Home() {
   const [showLogin, setShowLogin] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [drawerId, setDrawerId] = useState<string | null>(null);
+  const [newOpen, setNewOpen] = useState(false);
 
   const [drag, setDrag] = useState<DragState | null>(null);
   const [holeIndex, setHoleIndex] = useState<number | null>(null);
@@ -219,6 +218,11 @@ export default function Home() {
   const handleDrawerDeleted = useCallback((id: string) => {
     setPrompts((prev) => prev.filter((p) => p.id !== id));
     setDrawerId(null);
+  }, []);
+
+  const handleCreated = useCallback((created: Prompt) => {
+    setPrompts((prev) => [created, ...prev]);
+    setNewOpen(false);
   }, []);
 
   const refreshFromServer = useCallback(async () => {
@@ -480,6 +484,14 @@ export default function Home() {
             )}
           </div>
         </div>
+        {isAuthenticated && (
+          <button className="nav-shell nav-static btn-new" onClick={() => setNewOpen(true)}>
+            <span className="nav-core">
+              <PlusIcon />
+              New Prompt
+            </span>
+          </button>
+        )}
         <span className="hero-count">— 共 {visible.length} 条提示词</span>
       </header>
 
@@ -524,16 +536,6 @@ export default function Home() {
             {dragging && holeIndex === restLen && (
               <div className="card-spacer" style={{ height: drag.height }} />
             )}
-            {isAuthenticated && !dragging && (
-              <Link className="card-shell card-new reveal" href="/new">
-                <div className="card-core">
-                  <span className="plus-orb">
-                    <PlusIcon />
-                  </span>
-                  <span>New Prompt</span>
-                </div>
-              </Link>
-            )}
           </>
         )}
       </main>
@@ -552,6 +554,8 @@ export default function Home() {
           onDeleted={handleDrawerDeleted}
         />
       )}
+
+      {newOpen && <NewPromptDrawer onClose={() => setNewOpen(false)} onCreated={handleCreated} />}
 
       <LoginDialog isOpen={showLogin} onLogin={handleLogin} />
     </>
