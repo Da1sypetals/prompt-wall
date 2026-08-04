@@ -18,9 +18,6 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "Prompt Wall",
   description: "A beautiful prompt management tool",
-  icons: {
-    icon: '/favicon.png',
-  },
 };
 
 export default function RootLayout({

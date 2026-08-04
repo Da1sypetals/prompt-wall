@@ -46,3 +46,9 @@ export const EditIcon = () => (
     <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
   </svg>
 );
+
+export const CloseIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5">
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+);

@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import Link from 'next/link';
 import { LoginDialog } from '@/components/LoginDialog';
+import { PromptDrawer } from '@/components/PromptDrawer';
 import { ArrowIcon, CopyIcon, GripIcon, PlusIcon, SearchIcon } from '@/components/icons';
 import { useReveal } from '@/lib/useReveal';
 import { sortPrompts } from '@/lib/format';
@@ -30,6 +31,7 @@ interface CardProps {
   isAuthenticated: boolean;
   copied: boolean;
   onCopy: (prompt: Prompt) => void;
+  onOpenDetail: (prompt: Prompt) => void;
   onGripPointerDown: (e: React.PointerEvent, id: string) => void;
   registerRef: (el: HTMLDivElement | null, id: string) => void;
 }
@@ -42,6 +44,7 @@ function Card({
   isAuthenticated,
   copied,
   onCopy,
+  onOpenDetail,
   onGripPointerDown,
   registerRef,
 }: CardProps) {
@@ -87,11 +90,15 @@ function Card({
             </span>
           </div>
         </div>
-        <Link className="card-zone-detail" href={`/prompts/${prompt.id}`} title="查看详情">
+        <div
+          className="card-zone-detail"
+          title="查看详情"
+          onClick={() => onOpenDetail(prompt)}
+        >
           <span className="card-arrow">
             <ArrowIcon />
           </span>
-        </Link>
+        </div>
       </div>
       {isAuthenticated && (
         <span
@@ -113,6 +120,7 @@ export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [drawerId, setDrawerId] = useState<string | null>(null);
 
   const [drag, setDrag] = useState<DragState | null>(null);
   const [holeIndex, setHoleIndex] = useState<number | null>(null);
@@ -198,6 +206,19 @@ export default function Home() {
     window.setTimeout(() => {
       setCopiedId((prev) => (prev === prompt.id ? null : prev));
     }, 1600);
+  }, []);
+
+  const handleOpenDetail = useCallback((prompt: Prompt) => {
+    setDrawerId(prompt.id);
+  }, []);
+
+  const handleDrawerSaved = useCallback((updated: Prompt) => {
+    setPrompts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+  }, []);
+
+  const handleDrawerDeleted = useCallback((id: string) => {
+    setPrompts((prev) => prev.filter((p) => p.id !== id));
+    setDrawerId(null);
   }, []);
 
   const refreshFromServer = useCallback(async () => {
@@ -427,6 +448,8 @@ export default function Home() {
     ? prompts.filter((p) => p.title.toLowerCase().includes(normalizedQuery))
     : prompts;
   const restLen = dragging ? visible.length - 1 : visible.length;
+  const drawerIndex = drawerId ? prompts.findIndex((p) => p.id === drawerId) : -1;
+  const drawerPrompt = drawerIndex >= 0 ? prompts[drawerIndex] : null;
 
   return (
     <>
@@ -436,15 +459,6 @@ export default function Home() {
           <Link className="nav-logo" href="/">
             Prompt <em>Wall</em>
           </Link>
-          <div className="nav-search">
-            <SearchIcon />
-            <input
-              type="text"
-              placeholder="搜索标题…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
           {isAuthenticated ? (
             <button className="btn-ghost" onClick={handleLogout}>
               登出
@@ -462,6 +476,15 @@ export default function Home() {
         <h1>
           Prompt <em>Wall</em>
         </h1>
+        <div className="nav-search">
+          <SearchIcon />
+          <input
+            type="text"
+            placeholder="搜索标题…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
         <span className="hero-count">— 共 {visible.length} 条提示词</span>
       </header>
 
@@ -496,6 +519,7 @@ export default function Home() {
                     isAuthenticated={isAuthenticated}
                     copied={copiedId === prompt.id}
                     onCopy={handleCopy}
+                    onOpenDetail={handleOpenDetail}
                     onGripPointerDown={onGripPointerDown}
                     registerRef={registerCardRef}
                   />
@@ -522,6 +546,17 @@ export default function Home() {
       <footer>
         <span className="f-serif">Prompt Wall</span>
       </footer>
+
+      {drawerPrompt && (
+        <PromptDrawer
+          key={drawerPrompt.id}
+          prompt={drawerPrompt}
+          index={drawerIndex}
+          onClose={() => setDrawerId(null)}
+          onSaved={handleDrawerSaved}
+          onDeleted={handleDrawerDeleted}
+        />
+      )}
 
       <LoginDialog isOpen={showLogin} onLogin={handleLogin} />
     </>

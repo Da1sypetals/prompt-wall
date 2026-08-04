@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowIcon, BackIcon } from '@/components/icons';
+import { CodeEditor } from '@/components/CodeEditor';
 import { useReveal } from '@/lib/useReveal';
 
 export default function NewPromptPage() {
@@ -14,8 +15,6 @@ export default function NewPromptPage() {
   const [saving, setSaving] = useState(false);
   const [authed, setAuthed] = useState(false);
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
   useEffect(() => {
     if (localStorage.getItem('prompt-wall-auth') !== 'true') {
       router.replace('/');
@@ -23,13 +22,6 @@ export default function NewPromptPage() {
     }
     setAuthed(true);
   }, [router]);
-
-  useLayoutEffect(() => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    ta.style.height = 'auto';
-    ta.style.height = `${Math.max(260, ta.scrollHeight)}px`;
-  }, [content]);
 
   useReveal([authed]);
 
@@ -90,13 +82,11 @@ export default function NewPromptPage() {
             <label className="content-label" htmlFor="contentInput">
               Prompt 内容
             </label>
-            <textarea
-              className="content-input"
+            <CodeEditor
               id="contentInput"
-              ref={textareaRef}
-              placeholder="在这里编写完整的提示词……"
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={setContent}
+              placeholder="在这里编写完整的提示词……"
             />
             <div className="content-foot">
               <span>{content.length} 字</span>
