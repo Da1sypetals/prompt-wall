@@ -249,36 +249,22 @@ body::after {
 .btn-ghost:hover { background: rgba(59, 40, 44, 0.04); color: var(--espresso); }
 
 /* ================= HOME HEADER ================= */
+/* 悬浮岛置于文档流（首页头部行内），不再固定于顶部 */
+.nav-shell.nav-static {
+  position: static;
+  transform: none;
+}
+
 .hero {
   display: flex;
   align-items: center;
   gap: 20px;
-  padding: 120px 6vw 32px;
+  padding: 40px 6vw 32px;
   border-bottom: 1px solid var(--hairline);
 }
 
-.hero h1 {
-  font-family: var(--font-fraunces), "Fraunces", serif;
-  font-weight: 400;
-  font-size: 28px;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-}
-
-.hero .nav-search {
-  flex: 1;
-  max-width: 340px;
-  min-width: 0;
-  margin-left: auto;
-}
-
-.hero h1 em {
-  font-style: italic;
-  font-weight: 300;
-  color: var(--espresso-soft);
-}
-
 .hero-count {
+  margin-left: auto;
   font-family: var(--font-fraunces), "Fraunces", serif;
   font-style: italic;
   font-size: 13px;
@@ -1178,8 +1164,10 @@ footer .f-serif { font-family: var(--font-fraunces), "Fraunces", serif; font-sty
 
 @media (max-width: 768px) {
   .nav-logo { margin-right: 4px; }
-  .hero { padding: 110px 24px 24px; flex-wrap: wrap; }
-  .hero .nav-search { order: 3; flex-basis: 100%; max-width: none; margin-left: 0; }
+  .hero { padding: 24px 16px; flex-wrap: wrap; }
+  .hero .nav-shell.nav-static { width: 100%; }
+  .hero .nav-shell.nav-static .nav-core { width: 100%; }
+  .hero .nav-search { flex: 1; min-width: 0; }
   .wall { grid-template-columns: 1fr; padding: 24px 16px 120px; gap: 16px; }
   .card-grip { opacity: 0.55; }
   .detail { padding: 130px 20px 96px; }

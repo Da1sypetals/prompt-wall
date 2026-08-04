@@ -453,37 +453,32 @@ export default function Home() {
 
   return (
     <>
-      {/* FLOATING ISLAND NAV */}
-      <nav className="nav-shell">
-        <div className="nav-core">
-          <Link className="nav-logo" href="/">
-            Prompt <em>Wall</em>
-          </Link>
-          {isAuthenticated ? (
-            <button className="btn-ghost" onClick={handleLogout}>
-              登出
-            </button>
-          ) : (
-            <button className="btn-ghost" onClick={() => setShowLogin(true)}>
-              登录
-            </button>
-          )}
-        </div>
-      </nav>
-
-      {/* HEADER */}
+      {/* HEADER：悬浮岛在文档流中，不再固定于顶部 */}
       <header className="hero">
-        <h1>
-          Prompt <em>Wall</em>
-        </h1>
-        <div className="nav-search">
-          <SearchIcon />
-          <input
-            type="text"
-            placeholder="搜索标题…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+        <div className="nav-shell nav-static">
+          <div className="nav-core">
+            <Link className="nav-logo" href="/">
+              Prompt <em>Wall</em>
+            </Link>
+            <div className="nav-search">
+              <SearchIcon />
+              <input
+                type="text"
+                placeholder="搜索标题…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            {isAuthenticated ? (
+              <button className="btn-ghost" onClick={handleLogout}>
+                登出
+              </button>
+            ) : (
+              <button className="btn-ghost" onClick={() => setShowLogin(true)}>
+                登录
+              </button>
+            )}
+          </div>
         </div>
         <span className="hero-count">— 共 {visible.length} 条提示词</span>
       </header>
