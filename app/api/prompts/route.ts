@@ -26,13 +26,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Sort: pinned by pinnedOrder asc, then unpinned by createdAt desc
-    prompts = [...prompts].sort((a: Prompt, b: Prompt) => {
-      const aPinned = a.pinnedOrder ?? Infinity;
-      const bPinned = b.pinnedOrder ?? Infinity;
-      if (aPinned !== bPinned) return aPinned - bPinned;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+    // Sort by order ascending
+    prompts = [...prompts].sort((a: Prompt, b: Prompt) => a.order - b.order);
 
     return NextResponse.json({ success: true, data: prompts });
   } catch {
@@ -57,14 +52,20 @@ export async function POST(request: NextRequest) {
     }
     
     const data = await getPromptWallData();
-    
+
+    // Shift existing prompts down by one to make room at the top
+    for (const p of data.prompts) {
+      p.order += 1;
+    }
+
     const newPrompt: Prompt = {
       id: Date.now().toString(),
       title,
       content,
       createdAt: new Date().toISOString(),
+      order: 0,
     };
-    
+
     data.prompts.push(newPrompt);
     await setPromptWallData(data);
     

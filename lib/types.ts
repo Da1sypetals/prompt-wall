@@ -4,6 +4,8 @@ export interface Prompt {
   content: string;
   createdAt: string;
   updatedAt?: string;
+  order: number;
+  /** @deprecated 清理阶段删除 */
   pinnedOrder?: number;
 }
 

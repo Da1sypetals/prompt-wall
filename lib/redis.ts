@@ -1,6 +1,7 @@
 import { Redis } from '@upstash/redis';
 
-export const PROMPT_WALL_KEY = 'prompt-wall';
+export const PROMPT_WALL_KEY = 'prompt-wall:v2';
+export const PROMPT_WALL_KEY_V1 = 'prompt-wall';
 
 // Check if we're in build/static generation phase
 const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build' || 

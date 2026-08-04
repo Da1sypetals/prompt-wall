@@ -1,94 +1,175 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, X, LogOut, LogIn, Loader2, Puzzle } from 'lucide-react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { PromptCard } from '@/components/PromptCard';
-import { SearchBar } from '@/components/SearchBar';
 import { LoginDialog } from '@/components/LoginDialog';
-import { ViewModeSlider } from '@/components/ViewModeSlider';
-import { Prompt } from '@/lib/types';
+import { ArrowIcon, CopyIcon, GripIcon, PlusIcon, SearchIcon } from '@/components/icons';
+import { useReveal } from '@/lib/useReveal';
+import { sortPrompts } from '@/lib/format';
+import type { Prompt } from '@/lib/types';
 
-function distributePrompts(prompts: Prompt[], columnCount: number): Prompt[][] {
-  const columns = Array.from({ length: columnCount }, () => [] as Prompt[]);
+interface DragState {
+  id: string;
+  offsetX: number;
+  offsetY: number;
+  height: number;
+  index: number;
+  left: number;
+  top: number;
+  width: number;
+}
 
-  prompts.forEach((prompt, index) => {
-    columns[index % columnCount].push(prompt);
-  });
+/* ---------- 卡片：左 70% 粉底点击复制，右 30% 白底点击进详情，抓手在卡片右上角 ---------- */
 
-  return columns;
+interface CardProps {
+  prompt: Prompt;
+  index: number;
+  isDragging: boolean;
+  dragRect?: { left: number; top: number; width: number };
+  isAuthenticated: boolean;
+  copied: boolean;
+  onCopy: (prompt: Prompt) => void;
+  onGripPointerDown: (e: React.PointerEvent, id: string) => void;
+  registerRef: (el: HTMLDivElement | null, id: string) => void;
+}
+
+function Card({
+  prompt,
+  index,
+  isDragging,
+  dragRect,
+  isAuthenticated,
+  copied,
+  onCopy,
+  onGripPointerDown,
+  registerRef,
+}: CardProps) {
+  const style: React.CSSProperties = { transitionDelay: `${(index % 3) * 60}ms` };
+  if (isDragging && dragRect) {
+    Object.assign(style, {
+      position: 'fixed',
+      left: dragRect.left,
+      top: dragRect.top,
+      width: dragRect.width,
+      margin: 0,
+      zIndex: 30,
+      pointerEvents: 'none',
+      cursor: 'grabbing',
+      boxShadow: '0 24px 48px -16px rgba(59, 40, 44, 0.22)',
+    });
+  }
+
+  const text = prompt.content.replace(/\s+/g, ' ').trim();
+  const preview = text.length > 12 ? text.slice(0, 12) + '...' : text;
+
+  return (
+    <div
+      className="card-shell reveal"
+      style={style}
+      ref={(el) => registerRef(el, prompt.id)}
+    >
+      <div className="card-split">
+        <div className="card-zone-copy" onClick={() => onCopy(prompt)}>
+          <div className="card-top">
+            <span className="card-index">No. {String(index + 1).padStart(3, '0')}</span>
+          </div>
+          <div className="card-text">
+            <h2 className="card-title">{prompt.title}</h2>
+            {preview && <p className="card-preview">{preview}</p>}
+          </div>
+          <div className="card-actions">
+            <span className={`card-copy${copied ? ' copied' : ''}`}>
+              <span className="copy-label">{copied ? '已复制' : '复制'}</span>
+              <span className="icon-orb">
+                <CopyIcon />
+              </span>
+            </span>
+          </div>
+        </div>
+        <Link className="card-zone-detail" href={`/prompts/${prompt.id}`} title="查看详情">
+          <span className="card-arrow">
+            <ArrowIcon />
+          </span>
+        </Link>
+      </div>
+      {isAuthenticated && (
+        <span
+          className="card-grip"
+          title="拖拽排序"
+          onPointerDown={(e) => onGripPointerDown(e, prompt.id)}
+        >
+          <GripIcon />
+        </span>
+      )}
+    </div>
+  );
 }
 
 export default function Home() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const [contentQuery, setContentQuery] = useState('');
-  const [titleQuery, setTitleQuery] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
-  const [newPromptTitle, setNewPromptTitle] = useState('');
-  const [newPromptContent, setNewPromptContent] = useState('');
-  const [viewMode, setViewMode] = useState<'single' | 'double' | 'triple'>('triple');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Get column count based on view mode
-  const getColumnCount = () => {
-    switch (viewMode) {
-      case 'single':
-        return 1;
-      case 'double':
-        return 2;
-      case 'triple':
-        return 3;
-    }
-  };
+  const [drag, setDrag] = useState<DragState | null>(null);
+  const [holeIndex, setHoleIndex] = useState<number | null>(null);
 
-  // Check auth status on mount
+  const wallRef = useRef<HTMLDivElement>(null);
+  const cardEls = useRef(new Map<string, HTMLDivElement>());
+  const dragRef = useRef<DragState | null>(null);
+  const holeIndexRef = useRef<number | null>(null);
+  const promptsRef = useRef<Prompt[]>([]);
+  const queryRef = useRef('');
+  const authedRef = useRef(false);
+
   useEffect(() => {
-    const authStatus = localStorage.getItem('prompt-wall-auth');
-    if (authStatus === 'true') {
+    promptsRef.current = prompts;
+  }, [prompts]);
+  useEffect(() => {
+    queryRef.current = query;
+  }, [query]);
+  useEffect(() => {
+    authedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (localStorage.getItem('prompt-wall-auth') === 'true') {
       setIsAuthenticated(true);
     }
   }, []);
 
-  // Fetch prompts
   const fetchPrompts = useCallback(async () => {
-    setLoading(true);
+    const start = Date.now();
     try {
-      const params = new URLSearchParams();
-      if (contentQuery) params.append('content', contentQuery);
-      if (titleQuery) params.append('title', titleQuery);
-
-      const response = await fetch(`/api/prompts?${params}`);
-      const data = await response.json();
-
+      const res = await fetch('/api/prompts');
+      const data = await res.json();
       if (data.success) {
-        setPrompts(data.data);
+        setPrompts(sortPrompts(data.data));
       }
     } catch (error) {
       console.error('Failed to fetch prompts:', error);
     } finally {
-      setLoading(false);
+      // 加载态至少展示 500ms，避免转圈一闪而过
+      const remain = 500 - (Date.now() - start);
+      window.setTimeout(() => setLoading(false), Math.max(0, remain));
     }
-  }, [contentQuery, titleQuery]);
+  }, []);
 
   useEffect(() => {
     fetchPrompts();
   }, [fetchPrompts]);
 
-  // Login handler
-  const handleLogin = async (password: string): Promise<boolean> => {
+  const handleLogin = useCallback(async (password: string): Promise<boolean> => {
     try {
-      const response = await fetch('/api/auth', {
+      const res = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),
       });
-
-      const data = await response.json();
-
+      const data = await res.json();
       if (data.success) {
         setIsAuthenticated(true);
         localStorage.setItem('prompt-wall-auth', 'true');
@@ -100,260 +181,349 @@ export default function Home() {
       console.error('Login error:', error);
       return false;
     }
-  };
+  }, []);
 
-  // Logout handler
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     setIsAuthenticated(false);
     localStorage.removeItem('prompt-wall-auth');
-    setEditingId(null);
-    setIsCreating(false);
-  };
+  }, []);
 
-  // Create prompt
-  const handleCreate = async (title: string, content: string) => {
-    const response = await fetch('/api/prompts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, content }),
-    });
-
-    if (response.ok) {
-      setIsCreating(false);
-      setNewPromptTitle('');
-      setNewPromptContent('');
-      fetchPrompts();
+  const handleCopy = useCallback(async (prompt: Prompt) => {
+    try {
+      await navigator.clipboard.writeText(prompt.content);
+    } catch (error) {
+      console.error('Copy failed:', error);
     }
-  };
+    setCopiedId(prompt.id);
+    window.setTimeout(() => {
+      setCopiedId((prev) => (prev === prompt.id ? null : prev));
+    }, 1600);
+  }, []);
 
-  // Update prompt
-  const handleUpdate = async (id: string, title: string, content: string) => {
-    const response = await fetch(`/api/prompts/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, content }),
-    });
-
-    if (response.ok) {
-      setEditingId(null);
-      fetchPrompts();
+  const refreshFromServer = useCallback(async () => {
+    try {
+      const res = await fetch('/api/prompts');
+      const data = await res.json();
+      if (data.success) setPrompts(sortPrompts(data.data));
+    } catch (error) {
+      console.error('Refresh failed:', error);
     }
-  };
+  }, []);
 
-  // Delete prompt
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this prompt?')) return;
+  const submitOrder = useCallback(
+    async (ids: string[]) => {
+      try {
+        const res = await fetch('/api/prompts/reorder', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids }),
+        });
+        if (!res.ok) {
+          await refreshFromServer();
+        }
+      } catch (error) {
+        console.error('Reorder failed:', error);
+        await refreshFromServer();
+      }
+    },
+    [refreshFromServer]
+  );
 
-    const response = await fetch(`/api/prompts/${id}`, {
-      method: 'DELETE',
-    });
+  const registerCardRef = useCallback((el: HTMLDivElement | null, id: string) => {
+    if (el) cardEls.current.set(id, el);
+    else cardEls.current.delete(id);
+  }, []);
 
-    if (response.ok) {
-      fetchPrompts();
+  /* ---------- 歌单式拖拽排序（抓手）：卡片不移出列表，仅 fixed 脱离文档流 ---------- */
+
+  const commitDrop = useCallback(
+    (id: string, idx: number | null) => {
+      const current = promptsRef.current;
+      const dragged = current.find((p) => p.id === id);
+      holeIndexRef.current = null;
+      dragRef.current = null;
+      if (!dragged) {
+        setHoleIndex(null);
+        setDrag(null);
+        return;
+      }
+      const rest = current.filter((p) => p.id !== id);
+      const insertAt = idx === null ? rest.length : Math.max(0, Math.min(idx, rest.length));
+      const next = [...rest];
+      next.splice(insertAt, 0, dragged);
+
+      // 同步完成重排：React 把卡片节点移入新格子并移除 fixed 相关样式，视觉零位移
+      flushSync(() => {
+        setPrompts(next);
+        setHoleIndex(null);
+        setDrag(null);
+      });
+      const cardEl = cardEls.current.get(id);
+      if (cardEl) {
+        cardEl.style.removeProperty('transition');
+        cardEl.style.removeProperty('transform');
+      }
+      submitOrder(next.map((p) => p.id));
+    },
+    [submitOrder]
+  );
+
+  const onDragMove = useCallback((e: PointerEvent) => {
+    const d = dragRef.current;
+    if (!d) return;
+    const cardEl = cardEls.current.get(d.id);
+    if (cardEl) {
+      cardEl.style.left = `${e.clientX - d.offsetX}px`;
+      cardEl.style.top = `${e.clientY - d.offsetY}px`;
     }
-  };
+    const wallEl = wallRef.current;
+    if (!wallEl) return;
+    const wallRect = wallEl.getBoundingClientRect();
+    const px = e.clientX - wallRect.left;
+    const py = e.clientY - wallRect.top;
 
-  // Pin / bubble / unpin prompt
-  const handlePin = async (id: string, action: 'pin' | 'bubble' | 'unpin') => {
-    const response = await fetch(`/api/prompts/${id}/pin`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action }),
-    });
-
-    if (response.ok) {
-      fetchPrompts();
+    /* 布局坐标（offsetLeft/Top，不受 FLIP transform 影响）判定指针落在哪张卡片的格子内 */
+    let targetId: string | null = null;
+    for (const [id, el] of cardEls.current) {
+      if (id === d.id) continue;
+      if (
+        px >= el.offsetLeft &&
+        px <= el.offsetLeft + el.offsetWidth &&
+        py >= el.offsetTop &&
+        py <= el.offsetTop + el.offsetHeight
+      ) {
+        targetId = id;
+        break;
+      }
     }
-  };
+    if (!targetId) return;
 
-  // Edit handler
-  const handleEdit = (prompt: Prompt) => {
-    setEditingId(prompt.id);
-    setIsCreating(false);
-  };
+    const order = promptsRef.current.filter((p) => p.id !== d.id);
+    const targetIndex = order.findIndex((p) => p.id === targetId);
+    if (targetIndex < 0) return;
+    const hi = holeIndexRef.current;
+    if (hi === null) return;
+    // 拖到某张卡片上 = 空槽换到它的位置：空槽在其前则移到它之后，在其后则移到它之前
+    const next = targetIndex >= hi ? targetIndex + 1 : targetIndex;
+    if (next === hi) return;
 
-  // Discard edit/create
-  const handleDiscard = () => {
-    setEditingId(null);
-    setIsCreating(false);
-    // Note: We don't clear newPromptTitle/Content here to preserve them for next time
-  };
+    /* FLIP：记录位置 → 变更 DOM → 反向偏移 → 过渡回 0（跳过被拖卡片） */
+    const before = new Map<string, DOMRect>();
+    for (const [id, el] of cardEls.current) {
+      if (id === d.id) continue;
+      before.set(id, el.getBoundingClientRect());
+    }
+    holeIndexRef.current = next;
+    flushSync(() => setHoleIndex(next));
+    for (const [id, el] of cardEls.current) {
+      if (id === d.id) continue;
+      const first = before.get(id);
+      if (!first) continue;
+      const last = el.getBoundingClientRect();
+      const dx = first.left - last.left;
+      const dy = first.top - last.top;
+      if (!dx && !dy) continue;
+      el.style.transition = 'none';
+      el.style.transform = `translate(${dx}px, ${dy}px)`;
+      requestAnimationFrame(() => {
+        el.style.transition = 'transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)';
+        el.style.transform = '';
+        const cleanup = () => {
+          el.style.transition = '';
+          el.removeEventListener('transitionend', cleanup);
+        };
+        el.addEventListener('transitionend', cleanup);
+      });
+    }
+  }, []);
 
-  // Toggle new prompt creation
-  const toggleNewPrompt = () => {
-    if (isCreating) {
-      // Close the new prompt form (like discard)
-      setIsCreating(false);
+  const onDragEnd = useCallback(() => {
+    window.removeEventListener('pointermove', onDragMove);
+    const d = dragRef.current;
+    if (!d) return;
+    dragRef.current = null;
+    document.body.classList.remove('dragging');
+
+    const cardEl = cardEls.current.get(d.id);
+    const wallEl = wallRef.current;
+    const spacerEl = wallEl?.querySelector('.card-spacer') as HTMLElement | null;
+
+    if (cardEl && spacerEl) {
+      const dest = spacerEl.getBoundingClientRect();
+      const current = cardEl.getBoundingClientRect();
+      const dx = dest.left - current.left;
+      const dy = dest.top - current.top;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
+        // 已在空槽位置：坐标对齐空槽后直接落位
+        cardEl.style.left = `${dest.left}px`;
+        cardEl.style.top = `${dest.top}px`;
+        commitDrop(d.id, holeIndexRef.current);
+        return;
+      }
+      // 飞入空槽，然后落位
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        // 先把 fixed 坐标对齐空槽、清掉 transform，再落位，避免闪回原格
+        cardEl.style.transition = 'none';
+        cardEl.style.transform = '';
+        cardEl.style.left = `${dest.left}px`;
+        cardEl.style.top = `${dest.top}px`;
+        commitDrop(d.id, holeIndexRef.current);
+      };
+      cardEl.style.transition = 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)';
+      cardEl.style.transform = `translate(${dx}px, ${dy}px)`;
+      cardEl.addEventListener('transitionend', finish, { once: true });
+      window.setTimeout(finish, 450);
     } else {
-      // Open the new prompt form
-      setEditingId(null);
-      setIsCreating(true);
+      commitDrop(d.id, holeIndexRef.current);
     }
-  };
+  }, [onDragMove, commitDrop]);
 
-  // Clear filters
-  const handleClear = () => {
-    setContentQuery('');
-    setTitleQuery('');
-  };
+  useEffect(() => {
+    return () => {
+      window.removeEventListener('pointermove', onDragMove);
+    };
+  }, [onDragMove]);
 
-  // Get preview limits based on view mode
-  const getPreviewLimits = () => {
-    switch (viewMode) {
-      case 'single':
-        return { maxChars: 192, maxLines: 8 };
-      case 'double':
-        return { maxChars: 192, maxLines: 6 };
-      case 'triple':
-        return { maxChars: 192, maxLines: 4 };
-    }
-  };
+  const onGripPointerDown = useCallback(
+    (e: React.PointerEvent, id: string) => {
+      if (!authedRef.current || queryRef.current) return;
+      e.preventDefault();
+      const card = cardEls.current.get(id);
+      if (!card) return;
+      const rect = card.getBoundingClientRect();
+      const index = promptsRef.current.findIndex((p) => p.id === id);
 
-  const columnCount = getColumnCount();
-  const previewLimits = getPreviewLimits();
-  const promptColumns = distributePrompts(prompts, columnCount);
-  const promptColorIndices = new Map(prompts.map((prompt, index) => [prompt.id, index]));
+      const d: DragState = {
+        id,
+        offsetX: e.clientX - rect.left,
+        offsetY: e.clientY - rect.top,
+        height: rect.height,
+        index,
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+      };
+      dragRef.current = d;
+      holeIndexRef.current = index;
+      document.body.classList.add('dragging');
+      setDrag(d);
+      setHoleIndex(index);
+
+      window.addEventListener('pointermove', onDragMove);
+      window.addEventListener('pointerup', onDragEnd, { once: true });
+      window.addEventListener('pointercancel', onDragEnd, { once: true });
+    },
+    [onDragMove, onDragEnd]
+  );
+
+  useReveal([prompts, query, loading, isAuthenticated]);
+
+  const dragging = drag !== null;
+  const normalizedQuery = query.trim().toLowerCase();
+  const visible = normalizedQuery
+    ? prompts.filter((p) => p.title.toLowerCase().includes(normalizedQuery))
+    : prompts;
+  const restLen = dragging ? visible.length - 1 : visible.length;
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-fuchsia-50">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-bold text-pink-600">Prompt Wall</h1>
-          <div className="flex items-center gap-3">
-            <Link href="/compose">
-              <Button
-                variant="outline"
-                className="border-pink-300 text-pink-600 hover:bg-pink-100"
-              >
-                <Puzzle className="h-4 w-4 mr-2" />
-                拼好prompt
-              </Button>
-            </Link>
-            {isAuthenticated ? (
-              <Button
-                variant="outline"
-                onClick={handleLogout}
-                className="border-pink-300 text-pink-600 hover:bg-pink-100"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={() => setShowLogin(true)}
-                className="border-pink-300 text-pink-600 hover:bg-pink-100"
-              >
-                <LogIn className="h-4 w-4 mr-2" />
-                Login
-              </Button>
-            )}
+    <>
+      {/* FLOATING ISLAND NAV */}
+      <nav className="nav-shell">
+        <div className="nav-core">
+          <Link className="nav-logo" href="/">
+            Prompt <em>Wall</em>
+          </Link>
+          <div className="nav-search">
+            <SearchIcon />
+            <input
+              type="text"
+              placeholder="搜索标题…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
           </div>
-        </div>
-
-        {/* Search Bar */}
-        <div className="mb-6">
-          <SearchBar
-            contentQuery={contentQuery}
-            titleQuery={titleQuery}
-            onContentChange={setContentQuery}
-            onTitleChange={setTitleQuery}
-            onClear={handleClear}
-          />
-        </div>
-
-        {/* New Prompt Button, View Mode Slider & Loading Indicator */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {isAuthenticated && (
-              <Button
-                variant="outline"
-                onClick={toggleNewPrompt}
-                className="border-pink-300 text-pink-600 hover:bg-pink-100"
-              >
-                {isCreating ? <X className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-                {isCreating ? 'Discard' : 'New Prompt'}
-              </Button>
-            )}
-            <ViewModeSlider mode={viewMode} onChange={setViewMode} />
-          </div>
-          {loading && (
-            <div className="flex items-center text-pink-500">
-              <Loader2 className="h-5 w-5 animate-spin" />
-            </div>
+          {isAuthenticated ? (
+            <button className="btn-ghost" onClick={handleLogout}>
+              登出
+            </button>
+          ) : (
+            <button className="btn-ghost" onClick={() => setShowLogin(true)}>
+              登录
+            </button>
           )}
         </div>
+      </nav>
 
-        {/* New Prompt Card (always at top when creating) */}
-        {isCreating && (
-          <div
-            className="mb-4"
-            style={{
-              columnCount,
-              columnGap: '1rem',
-            }}
-          >
-            <div style={{ breakInside: 'avoid', marginBottom: '1rem' }}>
-              <PromptCard
-                colorIndex={0}
-                isAuthenticated={isAuthenticated}
-                isNew={true}
-                initialTitle={newPromptTitle}
-                initialContent={newPromptContent}
-                onSave={handleCreate}
-                onDiscard={handleDiscard}
-                onChange={(title, content) => {
-                  setNewPromptTitle(title);
-                  setNewPromptContent(content);
-                }}
-              />
-            </div>
+      {/* HEADER */}
+      <header className="hero">
+        <h1>
+          Prompt <em>Wall</em>
+        </h1>
+        <span className="hero-count">— 共 {visible.length} 条提示词</span>
+      </header>
+
+      {/* WALL */}
+      <main className="wall" ref={wallRef} id="wall">
+        {loading ? (
+          <div className="state-note" style={{ gridColumn: '1 / -1' }}>
+            <span className="spinner" />
+            加载中…
           </div>
-        )}
-
-        {/* Empty State */}
-        {prompts.length === 0 && !isCreating && !loading && (
-          <div className="text-center py-12 text-pink-400">
-            {contentQuery || titleQuery
-              ? 'No prompts match your search'
-              : 'No prompts yet. Create one!'}
+        ) : visible.length === 0 ? (
+          <div className="state-note" style={{ gridColumn: '1 / -1' }}>
+            {query ? '没有匹配的提示词' : '还没有提示词'}
           </div>
-        )}
-
-        {/* Existing Prompts */}
-        {prompts.length > 0 && (
-          <div
-            className="grid items-start gap-4"
-            style={{
-              gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
-            }}
-          >
-            {promptColumns.map((columnPrompts, columnIndex) => (
-              <div key={`prompt-column-${columnIndex}`} className="flex min-w-0 flex-col gap-4">
-                {columnPrompts.map((prompt) => (
-                  <PromptCard
-                    key={prompt.id}
+        ) : (
+          <>
+            {visible.map((prompt, i) => {
+              const isDragged = dragging && prompt.id === drag.id;
+              const restIndex = isDragged ? -1 : i - (dragging && i > drag.index ? 1 : 0);
+              return (
+                <Fragment key={prompt.id}>
+                  {dragging && !isDragged && restIndex === holeIndex && (
+                    <div className="card-spacer" style={{ height: drag.height }} />
+                  )}
+                  <Card
                     prompt={prompt}
-                    colorIndex={promptColorIndices.get(prompt.id) ?? 0}
+                    index={i}
+                    isDragging={isDragged}
+                    dragRect={
+                      isDragged ? { left: drag.left, top: drag.top, width: drag.width } : undefined
+                    }
                     isAuthenticated={isAuthenticated}
-                    isEditing={editingId === prompt.id}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onSave={(title, content) => handleUpdate(prompt.id, title, content)}
-                    onDiscard={handleDiscard}
-                    onPin={isAuthenticated ? handlePin : undefined}
-                    previewLimits={previewLimits}
+                    copied={copiedId === prompt.id}
+                    onCopy={handleCopy}
+                    onGripPointerDown={onGripPointerDown}
+                    registerRef={registerCardRef}
                   />
-                ))}
-              </div>
-            ))}
-          </div>
+                </Fragment>
+              );
+            })}
+            {dragging && holeIndex === restLen && (
+              <div className="card-spacer" style={{ height: drag.height }} />
+            )}
+            {isAuthenticated && !dragging && (
+              <Link className="card-shell card-new reveal" href="/new">
+                <div className="card-core">
+                  <span className="plus-orb">
+                    <PlusIcon />
+                  </span>
+                  <span>New Prompt</span>
+                </div>
+              </Link>
+            )}
+          </>
         )}
-      </div>
+      </main>
 
-      {/* Login Dialog */}
+      <footer>
+        <span className="f-serif">Prompt Wall</span>
+      </footer>
+
       <LoginDialog isOpen={showLogin} onLogin={handleLogin} />
-    </main>
+    </>
   );
 }
