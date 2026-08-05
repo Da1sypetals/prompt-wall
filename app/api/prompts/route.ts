@@ -53,17 +53,15 @@ export async function POST(request: NextRequest) {
     
     const data = await getPromptWallData();
 
-    // Shift existing prompts down by one to make room at the top
-    for (const p of data.prompts) {
-      p.order += 1;
-    }
+    // 新建排在最后面
+    const maxOrder = data.prompts.reduce((max, p) => Math.max(max, p.order), -1);
 
     const newPrompt: Prompt = {
       id: Date.now().toString(),
       title,
       content,
       createdAt: new Date().toISOString(),
-      order: 0,
+      order: maxOrder + 1,
     };
 
     data.prompts.push(newPrompt);

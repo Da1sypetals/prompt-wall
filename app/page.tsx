@@ -221,7 +221,7 @@ export default function Home() {
   }, []);
 
   const handleCreated = useCallback((created: Prompt) => {
-    setPrompts((prev) => [created, ...prev]);
+    setPrompts((prev) => [...prev, created]);
     setNewOpen(false);
   }, []);
 
